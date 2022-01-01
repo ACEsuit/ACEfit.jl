@@ -43,6 +43,8 @@ mutable struct Dat
    meta::Dict{String, Any}           # anything else ... 
 end
 
+Dat(config) = Dat(config, "", Any[], Dict{String, Any}())
+
 ==(d1::Dat, d2::Dat) = (
       (d1.config == d2.config) && 
       (d1.configtype == d2.configtype) && 
@@ -69,7 +71,7 @@ read_dict(::Val{:ACEfit_Dat}, D::Dict) = Dat(D)
 observations(d::Dat) = d.obs 
 
 
-cost(d::Dat) = length(config)
+cost(d::Dat) = 1
 
 
 # -----------------------------------------------------------------

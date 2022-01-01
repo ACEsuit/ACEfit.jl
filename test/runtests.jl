@@ -2,5 +2,7 @@ using ACEfit
 using Test
 
 @testset "ACEfit.jl" begin
-    # Write your tests here.
+    
+    @testset "Iterate" begin include("test_iterate.jl"); end 
+    
 end
