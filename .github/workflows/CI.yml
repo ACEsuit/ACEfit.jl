@@ -32,6 +32,8 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
+      - name: Install dependencies
+        run: julia --project=docs/ -e 'using Pkg; Pkg.Registry.add(RegistrySpec(url = "https://github.com/JuliaMolSim/MolSim"));'
       - uses: actions/cache@v1
         env:
           cache-name: cache-artifacts
@@ -52,6 +54,8 @@ jobs:
       - uses: julia-actions/setup-julia@v1
         with:
           version: '1'
+      - name: Install dependencies
+        run: julia --project=docs/ -e 'using Pkg; Pkg.Registry.add(RegistrySpec(url = "https://github.com/JuliaMolSim/MolSim"));'
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-docdeploy@v1
         env:
