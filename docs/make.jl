@@ -10,7 +10,7 @@ makedocs(;
     sitename="ACEfit.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://cortner.github.io/ACEfit.jl",
+        canonical="https://ACEsuit.github.io/ACEfit.jl",
         assets=String[],
     ),
     pages=[
@@ -19,6 +19,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/cortner/ACEfit.jl",
+    repo="github.com/ACEsuit/ACEfit.jl",
     devbranch="main",
 )
