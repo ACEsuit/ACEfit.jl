@@ -3,11 +3,13 @@ import Base: ==, convert
 
 import ACEbase: read_dict, write_dict
 
-export Dat
+export Dat, eval_obs, observations, vec_obs, devec_obs 
 
 
 # -----------------------------------------------------------------
 # registry of observation types 
+
+# TODO: not sure yet that we really need this - leave it for now but revisit.
 
 const _obstypes = Dict{String, Any}()
 
@@ -33,8 +35,12 @@ end
 
 
 """
-`Dat`: store one configuration that can have multiple observations 
-attached to it. Each 
+`Dat`: store one configuration (input, e.g., structure, state, ...)  that can 
+have multiple observations attached to it. Fields:
+- `config::Any` : the structure 
+- `configtype::String` : Each `dat::Dat` belongs to a group identified by a string `dat.configtype` to allow filtering, and grouping. 
+- `obs::Vector{Any}`  : list of observations 
+- `meta::Dict{String, Any}` : any additional meta information that we may want to attach to this data point; this needs to be raw json.
 """
 mutable struct Dat
    config                             # configuration
@@ -43,7 +49,8 @@ mutable struct Dat
    meta::Dict{String, Any}           # anything else ... 
 end
 
-Dat(config) = Dat(config, "", Any[], Dict{String, Any}())
+Dat(config, configtype="", obs=Any[]) = 
+      Dat(config, configtype, obs, Dict{String, Any}())
 
 ==(d1::Dat, d2::Dat) = (
       (d1.config == d2.config) && 
@@ -57,25 +64,24 @@ write_dict(d::Dat) =
    Dict("__id__" => "ACEfit_Dat",
          "config" => write_dict(d.config),
          "configtype" => d.configtype,
-         "obs" => d.obs,
+         "obs" => write_dict.(d.obs),
          "meta" => d.meta)
 
 
-Dat(D::Dict) = Dat(read_dict(D["config"]), 
-                   D["configtype"],
-                   Vector{Any}(D["obs"]), 
-                   Dict{String, Any}(D["meta"]) )
+Dat(D::Dict) = Dat( read_dict(D["config"]), 
+                    D["configtype"],
+                    Vector{Any}(D["obs"]), 
+                    Dict{String, Any}(D["meta"]) )
 
 read_dict(::Val{:ACEfit_Dat}, D::Dict) = Dat(D)
 
 observations(d::Dat) = d.obs 
 
-
 cost(d::Dat) = 1
 
 
 # -----------------------------------------------------------------
-# Abstract Observation interface 
+# Abstract Observations interface 
 # at this point it is not clear that we need an abstract Observations 
 # type hierarchy. Better to try and live without for now. 
 
@@ -118,13 +124,4 @@ eval_obs(obs::ObsPotentialEnergy, model, cfg) =
 ```
 """
 function eval_obs end
-
-
-# -----------------------------------------------------------------
-# Utilities for summarizing a dataset 
-
-# TODO: would be useful for Cas to move this in here since he has done a lot 
-# on that in `IPFitting.jl`. File an issue once this is ready to be 
-# brought in.
-
 
