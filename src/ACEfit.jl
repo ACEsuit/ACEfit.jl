@@ -16,6 +16,7 @@ include("iterate.jl")
 # linear least squares assembly for linear models
 
 # linear least squares solvers for linear models
+include("linearsolvers.jl")
 
 
 end
