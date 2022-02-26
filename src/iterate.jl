@@ -15,7 +15,6 @@ using ProgressMeter: Progress
 
 
 function siterate(f, data; verbose=true, msg = "serial", costs = cost.(data))
-
    progmtr = Progress(sum(costs))
    progctr = 0 
 

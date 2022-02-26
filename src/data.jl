@@ -113,15 +113,54 @@ function devec_obs end
 Evaluate a specific observation type: Given an observation `obs`, 
 a model `model` and  a configuration `cfg = dat.config`, the call 
 ```julia 
-eval_obs(obs, model, cfg)
+eval_obs(obstype, model, cfg)
 ```
 must return the corresponding observation. For example, if 
 `obs::ObsPotentialEnergy` and `cfg = at::Atoms`, and `model` is an interatomic 
 potential, then 
 ```julia 
-eval_obs(obs::ObsPotentialEnergy, model, cfg) = 
-      ObsPotentialEnergy( energy(model, cfg) )
+eval_obs(::Type{TOBS}, model, cfg) where {TOBS <: ObsPotentialEnergy} = 
+      TOBS( energy(model, cfg) )
 ```
 """
 function eval_obs end
 
+
+# the next prototype is again experimental- renaming this to basis_obs
+# instead of dispatching means that we don't have to worry about an abstract 
+# type hierarchy, we should discuss whether it obscures or clarifies
+
+"""
+`function basis_obs end` - evaluate an observation on a basis and a config; 
+used for llsq assembly, 
+```julia 
+basis_obs(obstype, basis, cfg)
+```
+For examle, for a potential energy the implementatin might look like this: 
+```julia 
+basis_obs(::Type{TOBS}, basis, at) where {TOBS <: ObsPotentialEnergy} = 
+   TOBS.( energy(basis, at) )
+```
+Note how the `TOBS` operation is now broadcast since `energy(basis, at)` 
+returns a vector of observations (one for each  basis functions) whereas 
+for a *model* we would use `eval_obs`.
+"""
+function basis_obs end 
+   
+
+
+# a first attempt at an interface for weights...
+# this feels like we should start dispatching and 
+# requiring o::AbstractObservation
+
+function set_weight!(o, w)
+   o.weight = w 
+   return o 
+end 
+
+function get_weight(o)
+   if !hasproperty(o, :weight)
+      return 1
+   end
+   return o.weight 
+end

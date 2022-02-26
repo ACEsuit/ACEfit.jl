@@ -3,6 +3,8 @@ using LowRankApprox: pqrfact
 
 # TODO: 
 #   - read_dict, write_dict 
+#   - LSQR 
+#   - various scikit-learn solvers 
 
 @doc raw"""
 `struct QR` : linear least squares solver, using standard QR factorisation; 
@@ -36,6 +38,8 @@ function solve_llsq(solver::QR, A, y)
    end 
    return qr(AP) \ yP
 end
+
+
 
 
 @doc raw"""

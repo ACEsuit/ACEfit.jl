@@ -14,6 +14,7 @@ include("iterate.jl")
 # should this stay in ACEflux? 
 
 # linear least squares assembly for linear models
+include("llsq.jl")
 
 # linear least squares solvers for linear models
 include("linearsolvers.jl")
