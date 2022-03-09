@@ -5,12 +5,15 @@
 # from a developer and user perspective. 
 #
 
+using Distributed
+
 using JuLIP, ACE, ACEfit, ACEatoms
 
 using ACEfit: eval_obs, vec_obs
 
 # load some example observation types 
 include("obsexamples.jl")
+@everywhere include("obsexamples.jl")
 
 OE = ObsExamples.ObsPotentialEnergy
 OF = ObsExamples.ObsForces
@@ -76,6 +79,7 @@ ACEfit.set_params!(m::typeof(model), args...) = ACE.set_params!(m, args...)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ACEfit.llsq!(model, data, :serial; solver = ACEfit.QR())
+#ACEfit.llsq!(model, data, :dist; solver = ACEfit.QR())
 
 # and we can confirm that this actually makes the loss small :)
 println("Loss after fit:  ", Loss(model, data))
