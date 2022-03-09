@@ -23,7 +23,7 @@ function siterate(f, data; verbose=true, msg = "serial", costs = cost.(data))
    for (idat, (dat, c)) in enumerate(zip(data, costs))
       f(idat, dat)
       progctr += c 
-      #ProgressMeter.update!(progmtr, progctr)
+      ProgressMeter.update!(progmtr, progctr)
    end
 
    t1 = time_ns()

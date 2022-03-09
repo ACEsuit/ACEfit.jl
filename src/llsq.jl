@@ -78,7 +78,6 @@ function asm_llsq(basis, data, _iterate)
    # inner assembly (this knows about A and Y)
    idx = 1
    function asm_lsq_inner(i0, dat)
-      println("idx:  ", idx)
       for o in observations(dat)
          # TODO: this isn't type stable; for very cheap models, this inner 
          #       loop could be a bottleneck, can it be fixed? 
@@ -86,7 +85,6 @@ function asm_llsq(basis, data, _iterate)
          y = vec_obs(o)
          w = get_weight(o)
          inds = idx:idx+length(y)-1
-         println("  inds:  ", inds, "\t  max ind should reach length(Y):  ", length(Y))
          Y[inds] .= w .* y[:]
          for ib = 1:length(basis) 
             ovec = vec_obs(oB[ib])
