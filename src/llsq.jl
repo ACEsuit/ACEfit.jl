@@ -43,6 +43,7 @@ function llsq(basis, data::AbstractVector, par = :serial; solver = QR())
       _iterate = titerate
       A, y = asm_llsq(basis, data, _iterate)
    elseif par == :dist
+      _iterate = siterate
       A, y = asm_llsq_dist(basis, data, _iterate)
    else 
       error("unknown assembly type")
