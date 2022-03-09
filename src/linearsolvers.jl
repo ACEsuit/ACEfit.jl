@@ -1,5 +1,6 @@
 using LinearAlgebra: qr, I 
 using LowRankApprox: pqrfact
+using PyCall
 
 # TODO: 
 #   - read_dict, write_dict 
@@ -77,4 +78,32 @@ function solve_llsq(solver::RRQR, A, y)
    AP = A / solver.P 
    θP = pqrfact(AP, rtol = solver.rtol) \ y 
    return solver.P \ θP
+end
+
+@doc raw"""
+SKLEARN_BRR
+"""
+struct SKLEARN_BRR
+end
+
+function solve_llsq(solver::SKLEARN_BRR, A, y)
+   BRR = pyimport("sklearn.linear_model")["BayesianRidge"]
+   clf = BRR(normalize=true, compute_score=true)
+   clf.fit(A, y)
+   c = clf.coef_
+   return c
+end
+
+@doc raw"""
+SKLEARN_ARD
+"""
+struct SKLEARN_ARD
+end
+
+function solve_llsq(solver::SKLEARN_ARD, A, y)
+   ARD = pyimport("sklearn.linear_model")["ARDRegression"]
+   clf = ARD()
+   clf.fit(A, y)
+   c = clf.coef_
+   return c
 end
