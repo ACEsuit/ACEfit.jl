@@ -45,6 +45,12 @@ solver = ACEfit.RRQR(rtol = 0.99, P = P)
 @show norm(A * θ - y)
 @show norm(θ)
 
+@info(" ... LSQR")
+solver = ACEfit.LSQR(damp=0, atol=1e-6)
+θ = ACEfit.solve_llsq(solver, A, y)
+@show norm(A * θ - y)
+@show norm(θ)
+
 @info(" ... SKLEARN_BRR")
 solver = ACEfit.SKLEARN_BRR()
 θ = ACEfit.solve_llsq(solver, A, y)

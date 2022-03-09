@@ -1,5 +1,6 @@
 using LinearAlgebra: qr, I 
 using LowRankApprox: pqrfact
+using IterativeSolvers
 using PyCall
 
 # TODO: 
@@ -78,6 +79,22 @@ function solve_llsq(solver::RRQR, A, y)
    AP = A / solver.P 
    θP = pqrfact(AP, rtol = solver.rtol) \ y 
    return solver.P \ θP
+end
+
+
+@doc raw"""
+LSQR
+"""
+struct LSQR
+   damp::Number
+   atol::Number
+end
+
+LSQR(; damp=0, atol=1e-6) = LSQR(damp, atol)
+
+function solve_llsq(solver::LSQR, A, y)
+   c = lsqr(A, y, damp=solver.damp, atol=solver.atol)
+   return c
 end
 
 @doc raw"""
