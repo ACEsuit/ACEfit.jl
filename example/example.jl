@@ -55,7 +55,7 @@ function Loss(model, data)
    return L 
 end 
 
-Loss(model, data) 
+println("Loss before fit:  ", Loss(model, data))
 
 # note that the gradient of loss would always be obtained via AD, we never 
 # do this by hand. 
@@ -78,5 +78,5 @@ ACEfit.set_params!(m::typeof(model), args...) = ACE.set_params!(m, args...)
 ACEfit.llsq!(model, data, :serial; solver = ACEfit.QR())
 
 # and we can confirm that this actually makes the loss small :)
-Loss(model, data)
+println("Loss after fit:  ", Loss(model, data))
 
