@@ -3,6 +3,8 @@ using LowRankApprox: pqrfact
 using IterativeSolvers
 using PyCall
 
+include("bayesianlinear.jl")
+
 # TODO: 
 #   - read_dict, write_dict 
 #   - LSQR 
@@ -122,5 +124,27 @@ function solve_llsq(solver::SKLEARN_ARD, A, y)
    clf = ARD()
    clf.fit(A, y)
    c = clf.coef_
+   return c
+end
+
+@doc raw"""
+Bayesian Linear
+"""
+struct BL
+end
+
+function solve_llsq(solver::BL, A, y)
+   c, _, _, _ = BayesianRegression.bayesian_fit(y, A; verbose=false)
+   return c
+end
+
+@doc raw"""
+Bayesian ARD
+"""
+struct BARD
+end
+
+function solve_llsq(solver::BARD, A, y)
+   c, _, _, _, _ = BayesianRegression.ard_fit(y, A; verbose=false)
    return c
 end

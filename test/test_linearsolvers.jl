@@ -3,7 +3,8 @@ using ACEfit
 using LinearAlgebra
 
 @info("Test Solver on overdetermined system")
-Nobs = 10_000 
+#Nobs = 10_000 
+Nobs = 1000
 Nfeat = 100 
 A = randn(Nobs, Nfeat) / sqrt(Nobs)
 y = randn(Nobs)
@@ -59,6 +60,18 @@ solver = ACEfit.SKLEARN_BRR()
 
 @info(" ... SKLEARN_ARD")
 solver = ACEfit.SKLEARN_ARD()
+θ = ACEfit.solve_llsq(solver, A, y)
+@show norm(A * θ - y)
+@show norm(θ)
+
+@info(" ... Bayesian Linear")
+solver = ACEfit.BL()
+θ = ACEfit.solve_llsq(solver, A, y)
+@show norm(A * θ - y)
+@show norm(θ)
+
+@info(" ... Bayesian ARD")
+solver = ACEfit.BARD()
 θ = ACEfit.solve_llsq(solver, A, y)
 @show norm(A * θ - y)
 @show norm(θ)
