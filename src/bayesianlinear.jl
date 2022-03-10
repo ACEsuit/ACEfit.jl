@@ -101,7 +101,6 @@ $$
 
 using LinearAlgebra
 using Optim
-using Statistics
 
 function solve(
     y::Vector{<:AbstractFloat},
