@@ -78,8 +78,8 @@ ACEfit.eval(:(function set_params! end))
 ACEfit.set_params!(m::typeof(model), args...) = ACE.set_params!(m, args...)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-ACEfit.llsq!(model, data, :serial; solver = ACEfit.QR())
-#ACEfit.llsq!(model, data, :dist; solver = ACEfit.QR())
+ACEfit.llsq!(model, data, :serial; solver = ACEfit.LSQR())
+#ACEfit.llsq!(model, data, :dist; solver = ACEfit.LSQR())
 
 # and we can confirm that this actually makes the loss small :)
 println("Loss after fit:  ", Loss(model, data))

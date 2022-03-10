@@ -137,7 +137,10 @@ function asm_llsq_dist(basis, data, _iterate)
    end
 
    @sync [@spawnat w _iterate(asm_lsq_inner, data) for w in workers()]
-   A = convert(Array, A)  # send data to main processs and build full matrix
+
+   # send data to main process for use with any solver
+   #A = convert(Array, A)
+   #Y = convert(Vector, Y)
 
    return A, Y
 end

@@ -99,6 +99,12 @@ function solve_llsq(solver::LSQR, A, y)
    return c
 end
 
+function solve_llsq(solver::LSQR, A::DArray, y::DArray)
+   c = dzeros((size(A,2),), [1])
+   lsqr!(c, A, y, damp=solver.damp, atol=solver.atol)
+   return convert(Vector, c)
+end
+
 @doc raw"""
 SKLEARN_BRR
 """
