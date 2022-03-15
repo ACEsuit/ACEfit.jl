@@ -128,11 +128,12 @@ function log_marginal_likelihood!(
     X::Matrix{<:AbstractFloat},
     y::Vector{<:AbstractFloat},
     var_c::AbstractFloat,
-    var_e::AbstractFloat
+    var_e::AbstractFloat,
+    XTX::Matrix{<:AbstractFloat},
 )
     var_c_vec = var_c*ones(size(X,2))
     grad_vec = zeros(size(X,2)+1)
-    lml = log_marginal_likelihood!(lml, grad_vec, X, y, var_c_vec, var_e)
+    lml = log_marginal_likelihood!(lml, grad_vec, X, y, var_c_vec, var_e, XTX)
     grad[1] = sum(grad_vec[1:end-1])
     grad[2] = grad_vec[end]
     return lml
@@ -145,6 +146,7 @@ function log_marginal_likelihood!(
     y::Vector{<:AbstractFloat},
     var_c::Vector{<:AbstractFloat},
     var_e::AbstractFloat,
+    XTX::Matrix{<:AbstractFloat},
 )
     N = size(X,1)
     M = size(X,2)
@@ -155,12 +157,13 @@ function log_marginal_likelihood!(
         grad[1:M] = 0.5*(X'*inv_Σ_y*y).^2 - 0.5*diag(X'*inv_Σ_y*X)
         grad[M+1] = 0.5*y'*inv_Σ_y*inv_Σ_y*y - 0.5*tr(inv_Σ_y)
     else
-        Σ_c = var_e*inv(cholesky(Hermitian(X'*X+var_e*inv(Σ_0))))
-        μ_c = solve(y, X, var_c, var_e)
+        Σ_c = var_e*inv(cholesky(Hermitian(XTX+var_e*inv(Σ_0))))
+        μ_c = 1/var_e*Σ_c*X'*y
         lml = (-0.5/var_e*y'*(y-X*μ_c) + 0.5*logdet(Σ_c) - 0.5*logdet(Σ_0)
                     - 0.5*N*log(var_e) - 0.5*N*log(2*π))
         grad[1:M] = 0.5*(μ_c.^2 + diag(Σ_c) - var_c)./var_c.^2
-        grad[M+1] = 0.5*((y-X*μ_c)'*(y-X*μ_c) + tr(X*Σ_c*X') - N*var_e)/var_e^2
+        grad[M+1] = (0.5*sum((y-X*μ_c).^2)/var_e^2 + 0.5*dot(XTX,Σ_c)/var_e^2
+                        + 0.5*(-N*var_e)/var_e^2)
     end
     return lml
 end
@@ -171,10 +174,11 @@ function bayesian_fit(
     variance_floor::AbstractFloat=1e-8,
     verbose::Bool=false,
 )
+    XTX = X'*X
     function fg!(f, g, x)
         var_c = variance_floor + x[1]*x[1]
         var_e = variance_floor + x[2]*x[2]
-        f = log_marginal_likelihood!(f, g, X, y, var_c, var_e)
+        f = log_marginal_likelihood!(f, g, X, y, var_c, var_e, XTX)
         if f != nothing
             f = -f
         end
@@ -204,10 +208,11 @@ function ard_fit(
     variance_floor::AbstractFloat=1e-8;
     verbose::Bool=false,
 )
+    XTX = X'*X
     function fg!(f, g, x)
         var_c = variance_floor .+ x[1:end-1].*x[1:end-1]
         var_e = variance_floor + x[end]*x[end]
-        f = log_marginal_likelihood!(f, g, X, y, var_c, var_e)
+        f = log_marginal_likelihood!(f, g, X, y, var_c, var_e, XTX)
         if f != nothing
             f = -f
         end

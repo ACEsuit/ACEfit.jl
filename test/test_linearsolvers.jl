@@ -3,8 +3,7 @@ using ACEfit
 using LinearAlgebra
 
 @info("Test Solver on overdetermined system")
-#Nobs = 10_000 
-Nobs = 1000
+Nobs = 10_000
 Nfeat = 100 
 A = randn(Nobs, Nfeat) / sqrt(Nobs)
 y = randn(Nobs)
