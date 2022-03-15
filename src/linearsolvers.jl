@@ -113,7 +113,7 @@ end
 
 function solve_llsq(solver::SKLEARN_BRR, A, y)
    BRR = pyimport("sklearn.linear_model")["BayesianRidge"]
-   clf = BRR(normalize=true, compute_score=true)
+   clf = BRR()
    clf.fit(A, y)
    c = clf.coef_
    return c
