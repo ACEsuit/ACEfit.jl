@@ -191,7 +191,7 @@ function bayesian_fit(
     res = optimize(Optim.only_fg!(fg!),
                    ones(2),
                    Optim.LBFGS(),
-                   Optim.Options(g_tol=1e-5, show_trace=verbose))
+                   Optim.Options(x_tol=1e-3, g_tol=0.0, show_trace=verbose))
     verbose && println(res)
 
     lml = -Optim.minimum(res)
@@ -225,7 +225,7 @@ function ard_fit(
     res = optimize(Optim.only_fg!(fg!),
                    ones(size(X,2)+1),
                    Optim.LBFGS(),
-                   Optim.Options(g_tol=1e-5, show_trace=verbose))
+                   Optim.Options(x_tol=1e-3, g_tol=0.0, show_trace=verbose))
     verbose && println(res)
 
     lml = -Optim.minimum(res)
