@@ -127,8 +127,9 @@ end
 
 function solve_llsq(solver::SKLEARN_ARD, A, y)
    ARD = pyimport("sklearn.linear_model")["ARDRegression"]
-   clf = ARD()
+   clf = ARD(n_iter=100000, compute_score=true, verbose=true)
    clf.fit(A, y)
+   println("scores length  ", length(clf.scores_))
    c = clf.coef_
    return c
 end
