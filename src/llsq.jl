@@ -75,6 +75,19 @@ function asm_llsq(basis, data, _iterate)
    #            eltypes of A, y should be? real, complex, precision?
    A = zeros(Nobs, length(basis))
    Y = zeros(Nobs)
+
+   E0 = nothing
+   for dat in data
+      if haskey(dat.config.data, "config_type")
+         if dat.config.data["config_type"].data == "isolated_atom"
+            for o in observations(dat)
+               if hasproperty(o, :E)
+                  E0 = o.E
+               end
+            end
+         end
+      end
+   end
    
    # inner assembly (this knows about A and Y)
    idx = 1
@@ -85,7 +98,13 @@ function asm_llsq(basis, data, _iterate)
          #       loop could be a bottleneck, can it be fixed? 
          oB = basis_obs(typeof(o), basis, dat.config)
          y = vec_obs(o)
+         if hasproperty(o,:E); y = y .- length(dat.config)*E0; end
          w = get_weight(o)
+         # TODO: make this an input parameter eventually
+         if hasproperty(o, :E) || hasproperty(o, :V)
+         #if typeof(o)<:Main.ObsExamples.ObsPotentialEnergy
+            w = w ./ sqrt(length(dat.config))
+         end
          inds = idx:idx+length(y)-1
          Y[inds] .= w .* y[:]
          for ib = 1:length(basis) 
