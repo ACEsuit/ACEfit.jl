@@ -92,10 +92,14 @@ struct LSQR
    atol::Number
 end
 
-LSQR(; damp=0, atol=1e-6) = LSQR(damp, atol)
+LSQR(; damp=5e-3, atol=1e-6) = LSQR(damp, atol)
 
 function solve_llsq(solver::LSQR, A, y)
-   c = lsqr(A, y, damp=solver.damp, atol=solver.atol)
+   println("damp  ", solver.damp)
+   println("atol  ", solver.atol)
+   c, ch = lsqr(A, y, damp=solver.damp, atol=solver.atol, conlim=1e12, log=true, verbose=true)
+   println(ch)
+   println("relative RMS error  ", norm(A*c - y) / norm(y))
    return c
 end
 
