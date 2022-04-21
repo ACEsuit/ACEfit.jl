@@ -3,7 +3,8 @@ import Base: ==, convert
 
 import ACEbase: read_dict, write_dict
 
-export Dat, eval_obs, observations, vec_obs, devec_obs 
+export Dat, eval_obs, observations, vec_obs, devec_obs, 
+       set_weights! 
 
 
 # -----------------------------------------------------------------
@@ -163,4 +164,23 @@ function get_weight(o)
       return 1
    end
    return o.weight 
+end
+
+function set_weights!(dat::Dat, D::Dict)
+   key = dat.configtype
+   if !haskey(D, key)
+      key = "default"
+   end 
+   for o in dat.obs
+      # TODO: it feels this is where some weight-hooks could go?
+      set_weight!(o, D[key][typeof(o)])
+   end
+   return dat 
+end
+
+function set_weights!(data::AbstractVector{<: Dat}, D::Dict)
+   for dat in data 
+      set_weights!(dat, D)
+   end
+   return data 
 end
