@@ -70,4 +70,21 @@ module ObsExamples
    devec_obs(obs::TOBS, x::AbstractVector) where {TOBS <: ObsForces} = 
          TOBS(collect(vecs(x)))
 
+   struct ObsVirial{T}
+      V::AbstractVector{T}  # possible this should be a matrix...
+      weight::Real
+   end
+   ObsVirial{T}(V::AbstractVector) where {T} = ObsVirial(V, 1.0)
+   ObsVirial(V::AbstractVector) = ObsVirial(V, 1.0)
+   ACEfit.vec_obs(obs::ObsVirial) = obs.V
+   function ACEfit.basis_obs(::Type{TOBS}, basis, at) where {TOBS <: ObsVirial}
+         all_virials = virial(basis, at)
+         V = []
+         for m in all_virials
+            v = [m[1,1], m[2,2], m[3,3], m[3,2], m[3,1], m[2,1]]
+            push!(V, TOBS(v))
+         end
+         return V
+   end
+
 end
