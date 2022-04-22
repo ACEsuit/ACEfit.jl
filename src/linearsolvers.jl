@@ -1,4 +1,4 @@
-using LinearAlgebra: qr, I 
+using LinearAlgebra: qr, I, norm
 using LowRankApprox: pqrfact
 using IterativeSolvers
 using PyCall
