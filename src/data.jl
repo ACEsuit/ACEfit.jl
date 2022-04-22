@@ -166,21 +166,52 @@ function get_weight(o)
    return o.weight 
 end
 
-function set_weights!(dat::Dat, D::Dict)
+
+function _compute_weight(OBSTYPE, cfg, weights::Dict, weighthooks::Dict)
+   if haskey(weights, OBSTYPE)
+      w = weights[OBSTYPE]
+   elseif haskey(weights, "default")
+      w = weights["default"]
+   else 
+      w = 1.0 
+   end
+   if haskey(weighthooks, OBSTYPE)
+      w = weighthooks[OBSTYPE](w, cfg)
+   elseif haskey(weighthooks, "default")
+      w = weighthooks["default"](w, cfg)
+   end 
+end
+
+
+function set_weights!(dat::Dat, weights::Dict, weighthooks::Dict)
    key = dat.configtype
-   if !haskey(D, key)
+   if !haskey(weights, key)
       key = "default"
    end 
+
+   key_h = dat.configtype 
+   if !haskey(weighthooks, key_h)
+      key_h = "default"
+   end 
+
    for o in dat.obs
-      # TODO: it feels this is where some weight-hooks could go?
-      set_weight!(o, D[key][typeof(o)])
+      w = _compute_weight(typeof(o), dat.config, 
+                          weights[key], weighthooks[key_h])
+      set_weight!(o, w)
    end
    return dat 
 end
 
-function set_weights!(data::AbstractVector{<: Dat}, D::Dict)
+_id_weighhooks = Dict("default" => Dict("default" => (w, cfg) -> w))
+
+"""
+TODO: needs documentation 
+"""
+function set_weights!(data::AbstractVector{<: Dat}, 
+                      weights::Dict, 
+                      weighthooks::Dict = _id_weighhooks)
    for dat in data 
-      set_weights!(dat, D)
+      set_weights!(dat, weights, weighthooks)
    end
    return data 
 end
