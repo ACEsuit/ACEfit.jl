@@ -18,9 +18,13 @@ using ACEbase: ACEBasis
 
 
 # todo - move this to ACEbase I think 
-
-function get_basis end 
-
+# wcw: fix these hacks
+function get_basis(m::Any)
+    return m
+end
+function set_params!(m::Any, x::Any)
+    return m
+end
 
 # TODO: Maybe we can provide more fine-tuned execution models 
 #    struct Distributed parameters end  struct Serial ... end and so forth 
@@ -98,7 +102,6 @@ function asm_llsq(basis, data, _iterate)
          #       loop could be a bottleneck, can it be fixed? 
          oB = basis_obs(typeof(o), basis, dat.config)
          y = vec_obs(o)
-         if hasproperty(o,:E); y = y .- length(dat.config)*E0; end
          w = get_weight(o)
          # TODO: make this an input parameter eventually
          if hasproperty(o, :E) || hasproperty(o, :V)
