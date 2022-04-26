@@ -52,7 +52,7 @@ function llsq(basis, data::AbstractVector, par = :serial; solver = QR())
       A, y = asm_llsq(basis, data, _iterate)
    elseif par == :dist
       _iterate = siterate
-      A, y = asm_llsq_dist(basis, data, _iterate)
+      A, y, w = asm_llsq_dist(basis, data, _iterate)
    else 
       error("unknown assembly type")
    end
@@ -128,29 +128,33 @@ function asm_llsq_dist(basis, data, _iterate)
 
    A = dzeros(Nobs, length(basis))
    Y = dzeros(Nobs)
+   W = dzeros(Nobs)
 
-   idx = 1
+   idx = 0
    # TODO: i0 is not used anymore, should revisit
    function asm_lsq_inner(i0, dat)
       for o in observations(dat)
          oB = basis_obs(typeof(o), basis, dat.config)
          y = vec_obs(o)
          w = get_weight(o)
-         inds = idx:idx+length(y)-1
-         idx += length(y)
-         # check whether row indices are within local bounds
+         # TODO: make this an input parameter eventually
+         if hasproperty(o, :E) || hasproperty(o, :V)
+            w = w ./ sqrt(length(dat.config))
+         end
          localrows = localindices(Y)[1]
-         if inds[1]>localrows[end] || inds[end]<localrows[1]
-            continue
-         # TODO: cases with partial overlap
-         #elseif
-         end
          # fill rows of Y and A
-         localpart(Y)[inds.-localrows[1].+1] .= w .* y[:]
-         for ib = 1:length(basis)
-            ovec = vec_obs(oB[ib])
-            localpart(A)[inds.-localrows[1].+1, ib] .= w .* ovec[:]
+         for i in 1:length(y)
+            if (idx+i)<localrows[1] || (idx+i)>localrows[end]
+               continue
+            end
+            localpart(Y)[idx+i-localrows[1]+1] = y[i]
+            localpart(W)[idx+i-localrows[1]+1] = w
+            for ib = 1:length(basis)
+               ovec = vec_obs(oB[ib])
+               localpart(A)[idx+i-localrows[1]+1, ib] = ovec[i]
+            end
          end
+         idx += length(y)
       end
       return nothing
    end
@@ -161,7 +165,7 @@ function asm_llsq_dist(basis, data, _iterate)
    #A = convert(Array, A)
    #Y = convert(Vector, Y)
 
-   return A, Y
+   return A, Y, W
 end
 
 function error_llsq(data, approx, exact)
@@ -186,8 +190,10 @@ function error_llsq(data, approx, exact)
          obs_len = length(vec_obs(o))
          obs_errors = errors[i:i+obs_len-1]
          obs_values = exact[i:i+obs_len-1]
+         # TODO: we store the ref energy because it is used for the relrmse
+         #       calculation ... but does it make sense to use the total energy?
          if hasproperty(o, :E)
-            obs_values = obs_values .+ o.E0
+            obs_values = obs_values .+ o.E_ref
          end
          if hasproperty(o, :E) || hasproperty(o, :V)
             obs_errors = obs_errors ./ length(dat.config)
