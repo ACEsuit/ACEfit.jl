@@ -1,4 +1,5 @@
 using Distributed, DistributedArrays
+using LinearAlgebra
 
 # [CO] This can't be called here, otherwise can't call ACEfit from another 
 # package that doesn't have Distributed, DistributedArrays in its dependencies
@@ -37,16 +38,15 @@ end
 
 function llsq!(model, data::AbstractVector, par = :serial; solver = QR())
    basis = get_basis(model) # should return an ACEBasis 
-   θ = llsq(basis, data, par; solver = solver)
+   θ, errors = llsq(basis, data, par; solver = solver)
    set_params!(model, θ)
-   return model 
+   return θ, errors
 end
-
 
 function llsq(basis, data::AbstractVector, par = :serial; solver = QR())
    if par == :serial
       _iterate = siterate
-      A, y = asm_llsq(basis, data, _iterate)
+      A, y, w = asm_llsq(basis, data, _iterate)
    elseif par == :mt
       _iterate = titerate
       A, y = asm_llsq(basis, data, _iterate)
@@ -57,7 +57,12 @@ function llsq(basis, data::AbstractVector, par = :serial; solver = QR())
       error("unknown assembly type")
    end
 
-   return solve_llsq(solver, A, y)
+   coef = solve_llsq(solver, Diagonal(w)*A, w.*y)
+
+   config_errors = error_llsq(data, A*coef-y)
+
+   return coef, config_errors
+
 end
 
 function get_lsq_indices(data)
@@ -77,25 +82,13 @@ function get_lsq_indices(data)
 end
 
 function asm_llsq(basis, data, _iterate)
-   firstidx, Nobs = get_lsq_indices(data)
+   _, Nobs = get_lsq_indices(data)
 
    # allocate - maybe we need to check somewhere what the 
    #            eltypes of A, y should be? real, complex, precision?
    A = zeros(Nobs, length(basis))
    Y = zeros(Nobs)
-
-   E0 = nothing
-   for dat in data
-      if haskey(dat.config.data, "config_type")
-         if dat.config.data["config_type"].data == "isolated_atom"
-            for o in observations(dat)
-               if hasproperty(o, :E)
-                  E0 = o.E
-               end
-            end
-         end
-      end
-   end
+   W = zeros(Nobs)
    
    # inner assembly (this knows about A and Y)
    idx = 1
@@ -112,10 +105,11 @@ function asm_llsq(basis, data, _iterate)
             w = w ./ sqrt(length(dat.config))
          end
          inds = idx:idx+length(y)-1
-         Y[inds] .= w .* y[:]
+         Y[inds] .= y[:]
+         W[inds] .= w*ones(length(y))
          for ib = 1:length(basis) 
             ovec = vec_obs(oB[ib])
-            A[inds, ib] .= w .* ovec[:]
+            A[inds, ib] .= ovec[:]
          end
          idx += length(y)
       end
@@ -124,13 +118,13 @@ function asm_llsq(basis, data, _iterate)
 
    _iterate(asm_lsq_inner, data)
 
-   return A, Y 
+   return A, Y, W
 end
 
 function asm_llsq_dist(basis, data, _iterate)
 
    # for now, all data is sent to all workers, should revisit
-   firstidx, Nobs = get_lsq_indices(data)
+   _, Nobs = get_lsq_indices(data)
 
    A = dzeros(Nobs, length(basis))
    Y = dzeros(Nobs)
@@ -168,4 +162,60 @@ function asm_llsq_dist(basis, data, _iterate)
    #Y = convert(Vector, Y)
 
    return A, Y
+end
+
+function error_llsq(data, errors)
+
+   config_types = String[]
+   config_counts = Dict("set"=>Dict("E"=>0,   "F"=>0,   "V"=>0))
+   config_errors = Dict("set"=>Dict("E"=>0.0, "F"=>0.0, "V"=>0.0))
+   for dat in data
+       if !(dat.configtype in config_types)
+          push!(config_types, dat.configtype)
+          merge!(config_counts, Dict(dat.configtype=>Dict("E"=>0,   "F"=>0,   "V"=>0)))
+          merge!(config_errors, Dict(dat.configtype=>Dict("E"=>0.0, "F"=>0.0, "V"=>0.0)))
+       end
+   end
+
+   i = 1
+   for dat in data
+      for o in observations(dat)
+         obs_len = length(vec_obs(o))
+         obs_errors = errors[i:i+obs_len-1]
+         if hasproperty(o, :E) || hasproperty(o, :V)
+            obs_errors = obs_errors ./ length(dat.config)
+         end
+         obs_error = sum(obs_errors.^2)
+         if hasproperty(o, :E)
+            config_counts["set"]["E"] += obs_len
+            config_errors["set"]["E"] += obs_error
+            config_counts[dat.configtype]["E"] += obs_len
+            config_errors[dat.configtype]["E"] += obs_error
+         elseif hasproperty(o, :F)
+            config_counts["set"]["F"] += obs_len
+            config_errors["set"]["F"] += obs_error
+            config_counts[dat.configtype]["F"] += obs_len
+            config_errors[dat.configtype]["F"] += obs_error
+         elseif hasproperty(o, :V)
+            config_counts["set"]["V"] += obs_len
+            config_errors["set"]["V"] += obs_error
+            config_counts[dat.configtype]["V"] += obs_len
+            config_errors[dat.configtype]["V"] += obs_error
+         else
+            println("something is wrong")
+         end
+         i += obs_len
+      end
+   end
+
+   for i in keys(config_errors)
+      for j in keys(config_errors[i])
+         config_errors[i][j] /= config_counts[i][j]
+         config_errors[i][j] = sqrt(config_errors[i][j])
+      end
+
+   end
+
+   return config_errors
+
 end
