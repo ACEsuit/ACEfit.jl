@@ -29,7 +29,7 @@ struct QR
    P
 end
 
-QR(; λ = 0.0, P = nothing) = QR(λ, P)
+QR(; λ = 0.0, P = I) = QR(λ, P)
 
          
 function solve_llsq(solver::QR, A, y)

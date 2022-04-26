@@ -1,5 +1,9 @@
 using Distributed, DistributedArrays
-@everywhere using Distributed, DistributedArrays
+
+# [CO] This can't be called here, otherwise can't call ACEfit from another 
+# package that doesn't have Distributed, DistributedArrays in its dependencies
+# note sure yet how to resolve this 
+# @everywhere using Distributed, DistributedArrays
 
 using ACEbase: ACEBasis
 
