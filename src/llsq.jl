@@ -59,7 +59,7 @@ function llsq(basis, data::AbstractVector, par = :serial; solver = QR())
 
    coef = solve_llsq(solver, Diagonal(w)*A, w.*y)
 
-   config_errors = error_llsq(data, A*coef-y)
+   config_errors = error_llsq(data, A*coef, y)
 
    return coef, config_errors
 
@@ -164,16 +164,19 @@ function asm_llsq_dist(basis, data, _iterate)
    return A, Y
 end
 
-function error_llsq(data, errors)
+function error_llsq(data, approx, exact)
 
+   errors = approx - exact
    config_types = String[]
-   config_counts = Dict("set"=>Dict("E"=>0,   "F"=>0,   "V"=>0))
+   config_counts = Dict("set"=>Dict("E"=>0, "F"=>0, "V"=>0))
    config_errors = Dict("set"=>Dict("E"=>0.0, "F"=>0.0, "V"=>0.0))
+   config_norms = Dict("set"=>Dict("E"=>0.0, "F"=>0.0, "V"=>0.0))
    for dat in data
        if !(dat.configtype in config_types)
           push!(config_types, dat.configtype)
           merge!(config_counts, Dict(dat.configtype=>Dict("E"=>0,   "F"=>0,   "V"=>0)))
           merge!(config_errors, Dict(dat.configtype=>Dict("E"=>0.0, "F"=>0.0, "V"=>0.0)))
+          merge!(config_norms, Dict(dat.configtype=>Dict("E"=>0.0, "F"=>0.0, "V"=>0.0)))
        end
    end
 
@@ -182,25 +185,37 @@ function error_llsq(data, errors)
       for o in observations(dat)
          obs_len = length(vec_obs(o))
          obs_errors = errors[i:i+obs_len-1]
+         obs_values = exact[i:i+obs_len-1]
+         if hasproperty(o, :E)
+            obs_values = obs_values .+ o.E0
+         end
          if hasproperty(o, :E) || hasproperty(o, :V)
             obs_errors = obs_errors ./ length(dat.config)
+            obs_values = obs_values ./ length(dat.config)
          end
          obs_error = sum(obs_errors.^2)
+         obs_norm = sum(obs_values.^2)
          if hasproperty(o, :E)
             config_counts["set"]["E"] += obs_len
             config_errors["set"]["E"] += obs_error
+            config_norms["set"]["E"] += obs_norm
             config_counts[dat.configtype]["E"] += obs_len
             config_errors[dat.configtype]["E"] += obs_error
+            config_norms[dat.configtype]["E"] += obs_norm
          elseif hasproperty(o, :F)
             config_counts["set"]["F"] += obs_len
             config_errors["set"]["F"] += obs_error
+            config_norms["set"]["F"] += obs_norm
             config_counts[dat.configtype]["F"] += obs_len
             config_errors[dat.configtype]["F"] += obs_error
+            config_norms[dat.configtype]["F"] += obs_norm
          elseif hasproperty(o, :V)
             config_counts["set"]["V"] += obs_len
             config_errors["set"]["V"] += obs_error
+            config_norms["set"]["V"] += obs_norm
             config_counts[dat.configtype]["V"] += obs_len
             config_errors[dat.configtype]["V"] += obs_error
+            config_norms[dat.configtype]["V"] += obs_norm
          else
             println("something is wrong")
          end
@@ -210,12 +225,12 @@ function error_llsq(data, errors)
 
    for i in keys(config_errors)
       for j in keys(config_errors[i])
-         config_errors[i][j] /= config_counts[i][j]
-         config_errors[i][j] = sqrt(config_errors[i][j])
+         config_errors[i][j] = sqrt(config_errors[i][j] / config_counts[i][j])
+         config_norms[i][j] = sqrt(config_norms[i][j] / config_counts[i][j])
+         config_norms[i][j] = config_errors[i][j] / config_norms[i][j]
       end
-
    end
 
-   return config_errors
+   return Dict("rmse"=>config_errors, "relrmse"=>config_norms)
 
 end
