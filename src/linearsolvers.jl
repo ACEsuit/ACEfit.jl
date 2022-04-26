@@ -90,13 +90,21 @@ LSQR
 struct LSQR
    damp::Number
    atol::Number
+   P
 end
 
+LSQR(damp, atol) = LSQR(damp, atol, I)
 LSQR(; damp=5e-3, atol=1e-6) = LSQR(damp, atol)
 
 function solve_llsq(solver::LSQR, A, y)
    println("damp  ", solver.damp)
    println("atol  ", solver.atol)
+   # preconditioning
+   if !(solver.P == I)
+      @info("LSQR: Using preconditioning")
+      D_inv = pinv(P)
+      mul!(A,A,D_inv)
+   end
    c, ch = lsqr(A, y, damp=solver.damp, atol=solver.atol, conlim=1e12, log=true, verbose=false)
    println(ch)
    println("relative RMS error  ", norm(A*c - y) / norm(y))
