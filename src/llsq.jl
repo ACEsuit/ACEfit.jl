@@ -109,7 +109,6 @@ function asm_llsq(basis, data, _iterate)
          w = get_weight(o)
          # TODO: make this an input parameter eventually
          if hasproperty(o, :E) || hasproperty(o, :V)
-         #if typeof(o)<:Main.ObsExamples.ObsPotentialEnergy
             w = w ./ sqrt(length(dat.config))
          end
          inds = idx:idx+length(y)-1
