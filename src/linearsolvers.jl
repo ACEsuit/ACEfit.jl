@@ -100,11 +100,11 @@ function solve_llsq(solver::LSQR, A, y)
    println("damp  ", solver.damp)
    println("atol  ", solver.atol)
    # preconditioning
-   if !(solver.P == I)
-      @info("LSQR: Using preconditioning")
-      D_inv = pinv(P)
-      mul!(A,A,D_inv)
-   end
+   #if !(solver.P == I)
+   #   @info("LSQR: Using preconditioning")
+   #   D_inv = pinv(P)
+   #   mul!(A,A,D_inv)
+   #end
    c, ch = lsqr(A, y, damp=solver.damp, atol=solver.atol, conlim=1e12, log=true, verbose=false)
    println(ch)
    println("relative RMS error  ", norm(A*c - y) / norm(y))
@@ -112,8 +112,11 @@ function solve_llsq(solver::LSQR, A, y)
 end
 
 function solve_llsq(solver::LSQR, A::DArray, y::DArray)
+   println("hello from solve_llsq dist")
+   println("damp  ", solver.damp)
+   println("atol  ", solver.atol)
    c = dzeros((size(A,2),), [1])
-   lsqr!(c, A, y, damp=solver.damp, atol=solver.atol)
+   lsqr!(c, A, y, damp=solver.damp, atol=solver.atol, conlim=1e12, log=true, verbose=false)
    return convert(Vector, c)
 end
 

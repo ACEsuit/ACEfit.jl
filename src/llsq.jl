@@ -1,5 +1,6 @@
 using Distributed, DistributedArrays
 using LinearAlgebra
+using TimerOutputs
 
 # [CO] This can't be called here, otherwise can't call ACEfit from another 
 # package that doesn't have Distributed, DistributedArrays in its dependencies
@@ -35,7 +36,6 @@ end
 #    struct Distributed parameters end  struct Serial ... end and so forth 
 #    rather than those symbols :serial, :mt, :dist
 
-
 function llsq!(model, data::AbstractVector, par = :serial; solver = QR())
    basis = get_basis(model) # should return an ACEBasis 
    θ, errors = llsq(basis, data, par; solver = solver)
@@ -44,6 +44,10 @@ function llsq!(model, data::AbstractVector, par = :serial; solver = QR())
 end
 
 function llsq(basis, data::AbstractVector, par = :serial; solver = QR())
+
+to = TimerOutput()
+
+@timeit to "assemble" begin
    if par == :serial
       _iterate = siterate
       A, y, w = asm_llsq(basis, data, _iterate)
@@ -56,10 +60,17 @@ function llsq(basis, data::AbstractVector, par = :serial; solver = QR())
    else 
       error("unknown assembly type")
    end
+end
 
-   coef = solve_llsq(solver, Diagonal(w)*A, w.*y)
+@timeit to "solve" begin
+   coef = solve_llsq(solver, A, y)
+end
 
-   config_errors = error_llsq(data, A*coef, y)
+@timeit to "errors" begin
+   config_errors = error_llsq(data, convert(Vector,A*coef)./convert(Vector,w), convert(Vector,y)./convert(Vector,w))
+end
+
+show(to)
 
    return coef, config_errors
 
@@ -82,10 +93,10 @@ function get_lsq_indices(data)
 end
 
 function asm_llsq(basis, data, _iterate)
+
    _, Nobs = get_lsq_indices(data)
 
-   # allocate - maybe we need to check somewhere what the 
-   #            eltypes of A, y should be? real, complex, precision?
+   println("Creating design matrix with size (", Nobs, ", ", length(basis), ")")
    A = zeros(Nobs, length(basis))
    Y = zeros(Nobs)
    W = zeros(Nobs)
@@ -105,11 +116,11 @@ function asm_llsq(basis, data, _iterate)
             w = w ./ sqrt(length(dat.config))
          end
          inds = idx:idx+length(y)-1
-         Y[inds] .= y[:]
-         W[inds] .= w*ones(length(y))
+         Y[inds] .= w.*y[:]
+         W[inds] .= w.*ones(length(y))
          for ib = 1:length(basis) 
             ovec = vec_obs(oB[ib])
-            A[inds, ib] .= ovec[:]
+            A[inds, ib] .= w.*ovec[:]
          end
          idx += length(y)
       end
@@ -126,44 +137,58 @@ function asm_llsq_dist(basis, data, _iterate)
    # for now, all data is sent to all workers, should revisit
    _, Nobs = get_lsq_indices(data)
 
+   println("Creating distributed design matrix with size (", Nobs, ", ", length(basis), ")")
    A = dzeros(Nobs, length(basis))
    Y = dzeros(Nobs)
    W = dzeros(Nobs)
 
-   idx = 0
-   # TODO: i0 is not used anymore, should revisit
-   function asm_lsq_inner(i0, dat)
-      for o in observations(dat)
-         oB = basis_obs(typeof(o), basis, dat.config)
-         y = vec_obs(o)
-         w = get_weight(o)
-         # TODO: make this an input parameter eventually
-         if hasproperty(o, :E) || hasproperty(o, :V)
-            w = w ./ sqrt(length(dat.config))
-         end
-         localrows = localindices(Y)[1]
-         # fill rows of Y and A
-         for i in 1:length(y)
-            if (idx+i)<localrows[1] || (idx+i)>localrows[end]
-               continue
+   function work_function(data)
+      to = TimerOutput()
+
+      row = 1
+      localrows = localindices(Y)[1]
+      # TODO: i0 is not used anymore, should revisit
+      function asm_lsq_inner(i0, dat)
+         for o in observations(dat)
+            y = vec_obs(o)
+            if row>localrows[end] || (row-1+length(y))<localrows[1]
+               row += length(y)    # no local work to do,
+               continue            # so increment and move on
             end
-            localpart(Y)[idx+i-localrows[1]+1] = y[i]
-            localpart(W)[idx+i-localrows[1]+1] = w
-            for ib = 1:length(basis)
-               ovec = vec_obs(oB[ib])
-               localpart(A)[idx+i-localrows[1]+1, ib] = ovec[i]
+            oB = basis_obs(typeof(o), basis, dat.config)
+            w = get_weight(o)
+            # TODO: make this an input parameter eventually
+            if hasproperty(o, :E) || hasproperty(o, :V)
+               w = w ./ sqrt(length(dat.config))
+            end
+            # fill rows of Y and A
+            for i in 1:length(y)
+               if row>=localrows[1] && row<=localrows[end]
+                  localpart(Y)[row-localrows[1]+1] = w*y[i]
+                  localpart(W)[row-localrows[1]+1] = w
+                  for ib = 1:length(basis)
+                     ovec = vec_obs(oB[ib])
+                     localpart(A)[row-localrows[1]+1, ib] = w*ovec[i]
+                  end
+               end
+               row += 1
             end
          end
-         idx += length(y)
+         return nothing
       end
-      return nothing
+
+      _iterate(asm_lsq_inner, data)
    end
 
-   @sync [@spawnat w _iterate(asm_lsq_inner, data) for w in workers()]
+   @sync for w in workers()
+#      @spawnat w _iterate(asm_lsq_inner, data)
+      @spawnat w work_function(data)
+   end
 
    # send data to main process for use with any solver
-   #A = convert(Array, A)
-   #Y = convert(Vector, Y)
+   A = convert(Array, A)
+   Y = convert(Vector, Y)
+   W = convert(Vector, W)
 
    return A, Y, W
 end
