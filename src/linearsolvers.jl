@@ -105,7 +105,7 @@ function solve_llsq(solver::LSQR, A, y)
    #   D_inv = pinv(P)
    #   mul!(A,A,D_inv)
    #end
-   c, ch = lsqr(A, y, damp=solver.damp, atol=solver.atol, conlim=1e12, log=true, verbose=false)
+   c, ch = lsqr(A, y, damp=solver.damp, atol=solver.atol, log=true, verbose=false)
    println(ch)
    println("relative RMS error  ", norm(A*c - y) / norm(y))
    return c
@@ -116,7 +116,9 @@ function solve_llsq(solver::LSQR, A::DArray, y::DArray)
    println("damp  ", solver.damp)
    println("atol  ", solver.atol)
    c = dzeros((size(A,2),), [1])
-   lsqr!(c, A, y, damp=solver.damp, atol=solver.atol, conlim=1e12, log=true, verbose=false)
+   c, ch = lsqr!(c, A, y, damp=solver.damp, atol=solver.atol, log=true, verbose=true)
+   println(ch)
+   println("relative RMS error  ", norm(A*c - y) / norm(y))
    return convert(Vector, c)
 end
 
