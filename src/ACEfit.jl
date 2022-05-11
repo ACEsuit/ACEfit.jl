@@ -13,6 +13,9 @@ include("iterate.jl")
 # loss functions and nonlinear solvers 
 # should this stay in ACEflux? 
 
+# this stuff should probably go elsewhere
+include("obs.jl")
+
 # linear least squares assembly for linear models
 include("llsq.jl")
 
