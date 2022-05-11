@@ -90,11 +90,13 @@ LSQR
 struct LSQR
    damp::Number
    atol::Number
+   conlim::Number
+   maxiter::Integer
+   verbose::Bool
    P
 end
 
-LSQR(damp, atol) = LSQR(damp, atol, I)
-LSQR(; damp=5e-3, atol=1e-6) = LSQR(damp, atol)
+LSQR(; damp=5e-3, atol=1e-6, conlim=1e8, maxiter=100000, verbose=false) = LSQR(damp, atol, conlim, maxiter, verbose, I)
 
 function solve_llsq(solver::LSQR, A, y)
    println("damp  ", solver.damp)
@@ -105,7 +107,8 @@ function solve_llsq(solver::LSQR, A, y)
    #   D_inv = pinv(P)
    #   mul!(A,A,D_inv)
    #end
-   c, ch = lsqr(A, y, damp=solver.damp, atol=solver.atol, log=true, verbose=false)
+   c, ch = lsqr(A, y; damp=solver.damp, atol=solver.atol, conlim=solver.conlim,
+                      maxiter=solver.maxiter, verbose=solver.verbose, log=true)
    println(ch)
    println("relative RMS error  ", norm(A*c - y) / norm(y))
    return c
@@ -116,7 +119,8 @@ function solve_llsq(solver::LSQR, A::DArray, y::DArray)
    println("damp  ", solver.damp)
    println("atol  ", solver.atol)
    c = dzeros((size(A,2),), [1])
-   c, ch = lsqr!(c, A, y, damp=solver.damp, atol=solver.atol, log=true, verbose=true)
+   c, ch = lsqr!(c, A, y; damp=solver.damp, atol=solver.atol, conlim=solver.conlim,
+                          maxiter=solver.maxiter, verbose=solver.verbose, log=true)
    println(ch)
    println("relative RMS error  ", norm(A*c - y) / norm(y))
    return convert(Vector, c)

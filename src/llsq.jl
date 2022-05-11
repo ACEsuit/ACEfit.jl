@@ -118,7 +118,7 @@ function asm_llsq(basis, data, _iterate)
    return A, Y, W
 end
 
-function assemble_dist!(A, Y, W, data_file, basis)
+function assemble_dist!(A, Y, W, data, basis)
 
    row = 1
    localrows = localindices(Y)[1]
