@@ -22,5 +22,6 @@ include("llsq.jl")
 # linear least squares solvers for linear models
 include("linearsolvers.jl")
 
+include("solver.jl")
 
 end

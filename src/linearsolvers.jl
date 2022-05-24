@@ -7,8 +7,28 @@ include("bayesianlinear.jl")
 
 # TODO: 
 #   - read_dict, write_dict 
-#   - LSQR 
-#   - various scikit-learn solvers 
+
+@doc raw"""
+create_solver
+"""
+function create_solver(params::Dict)
+    solver = uppercase(params["solver"])
+    delete!(params, "solver")
+    params = Dict(Symbol(k)=>v for (k,v) in pairs(params))
+    if solver == "QR"
+        return QR(; params...)
+    elseif solver == "LSQR"
+        return LSQR(; params...)
+    elseif solver == "RRQR"
+        return RRQR(; params...)
+    elseif solver == "SKLEARN_BRR"
+        return SKLEARN_BRR(; params...)
+    elseif solver == "SKLEARN_ARD"
+        return SKLEARN_ARD(; params...)
+    else
+        @error "ACEfit.create_solver does not recognize $(solver)."
+    end
+end
 
 @doc raw"""
 `struct QR` : linear least squares solver, using standard QR factorisation; 
@@ -29,8 +49,8 @@ struct QR
    P
 end
 
-QR(; λ = 0.0, P = I) = QR(λ, P)
-
+#QR(; λ = 0.0, P = I) = QR(λ, P)
+QR(; lambda=0.0, P=I) = QR(lambda, P)
          
 function solve_llsq(solver::QR, A, y)
    if solver.λ == 0 
@@ -42,9 +62,6 @@ function solve_llsq(solver::QR, A, y)
    end 
    return qr(AP) \ yP
 end
-
-
-
 
 @doc raw"""
 `struct RRQR` : linear least squares solver, using rank-revealing QR 
@@ -82,7 +99,6 @@ function solve_llsq(solver::RRQR, A, y)
    θP = pqrfact(AP, rtol = solver.rtol) \ y 
    return solver.P \ θP
 end
-
 
 @doc raw"""
 LSQR
@@ -130,12 +146,20 @@ end
 SKLEARN_BRR
 """
 struct SKLEARN_BRR
+    tol::Number
+    n_iter::Integer
 end
+SKLEARN_BRR(; tol=1e-3, n_iter=300) = SKLEARN_BRR(tol, n_iter)
 
 function solve_llsq(solver::SKLEARN_BRR, A, y)
    BRR = pyimport("sklearn.linear_model")["BayesianRidge"]
-   clf = BRR()
+   clf = BRR(n_iter=solver.n_iter, tol=solver.tol, fit_intercept=true, normalize=true, compute_score=true)
    clf.fit(A, y)
+   if length(clf.scores_) < solver.n_iter
+      @info "BRR converged to tol=$(solver.tol) after $(length(clf.scores_)) iterations."
+   else
+      @warn "\nBRR did not converge to tol=$(solver.tol) after n_iter=$(solver.n_iter) iterations.\n"
+   end
    c = clf.coef_
    return c
 end
@@ -144,13 +168,22 @@ end
 SKLEARN_ARD
 """
 struct SKLEARN_ARD
+    n_iter::Integer
+    tol::Number
+    threshold_lambda::Number
 end
+SKLEARN_ARD(; n_iter=300, tol=1e-3, threshold_lambda=10000) = SKLEARN_ARD(n_iter, tol, threshold_lambda)
 
 function solve_llsq(solver::SKLEARN_ARD, A, y)
    ARD = pyimport("sklearn.linear_model")["ARDRegression"]
-   clf = ARD(n_iter=100000, compute_score=true, verbose=true)
+   clf = ARD(n_iter=solver.n_iter, threshold_lambda=solver.threshold_lambda, tol=solver.tol,
+             fit_intercept=true, normalize=true, compute_score=true)
    clf.fit(A, y)
-   println("scores length  ", length(clf.scores_))
+   if length(clf.scores_) < solver.n_iter
+      @info "ARD converged to tol=$(solver.tol) after $(length(clf.scores_)) iterations."
+   else
+      @warn "\n\nARD did not converge to tol=$(solver.tol) after n_iter=$(solver.n_iter) iterations.\n\n"
+   end
    c = clf.coef_
    return c
 end
