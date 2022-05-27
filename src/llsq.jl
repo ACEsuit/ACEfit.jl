@@ -149,7 +149,12 @@ function assemble_dist_new!(A, Y, W, params, basis)
 
     for dict in ExtXYZ.iread_frames(params["data"]["fname"])
         atoms = JuLIP._extxyz_dict_to_atoms(dict)
-        data = _atoms_to_data(atoms, params)
+        v_ref = OneBody(convert(Dict{String,Any},params["e0"]))
+        energy_key = params["data"]["energy_key"]
+        force_key = params["data"]["force_key"]
+        virial_key = params["data"]["virial_key"]
+        weights = params["weights"]
+        data = _atoms_to_data(atoms, energy_key, force_key, virial_key, v_ref, weights)
         asm_lsq_inner(data)
     end
  

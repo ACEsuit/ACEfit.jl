@@ -45,14 +45,9 @@ function count_observations(filename, energy_key, force_key, virial_key)
 end
 
 
-function _atoms_to_data(atoms, params)
-    Vref = OneBody(convert(Dict{String,Any},params["e0"]))
-    energy_key = params["data"]["energy_key"]
-    force_key = params["data"]["force_key"]
-    virial_key = params["data"]["virial_key"]
-    weights = params["weights"]
+function _atoms_to_data(atoms, v_ref, energy_key, force_key, virial_key, weights)
 
-    energy = nothing
+    energy = nothing  # wcw: these change type in the loop ... should revise
     forces = nothing
     virial = nothing
     config_type = "default"
