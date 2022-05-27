@@ -1,7 +1,5 @@
 ### this file is temporary. it holds some random bits that I need to organize
 
-
-
 # todo - move this to ACEbase I think 
 # wcw: fix these hacks
 function get_basis(m::Any)
@@ -44,10 +42,11 @@ function count_observations(filename, energy_key, force_key, virial_key)
     return count
 end
 
+function _atoms_to_data(atoms, v_ref, weights, energy_key=nothing, force_key=nothing, virial_key=nothing)
 
-function _atoms_to_data(atoms, v_ref, energy_key, force_key, virial_key, weights)
+    # wcw todo: subtract force and virial references as well
 
-    energy = nothing  # wcw: these change type in the loop ... should revise
+    energy = nothing  # wcw: these change type in the loop ... revise?
     forces = nothing
     virial = nothing
     config_type = "default"
@@ -55,17 +54,17 @@ function _atoms_to_data(atoms, v_ref, energy_key, force_key, virial_key, weights
         if lowercase(key)=="config_type"; config_type=atoms.data[key].data; end
     end
     for key in keys(atoms.data)
-        if lowercase(key) == lowercase(energy_key)
+        if !isnothing(energy_key) && lowercase(key)==lowercase(energy_key)
             w = (config_type in keys(weights)) ? weights[config_type]["E"] : weights["default"]["E"]
-            energy_ref = JuLIP.energy(Vref, atoms)
+            energy_ref = JuLIP.energy(v_ref, atoms)
             energy = atoms.data[key].data - energy_ref
             energy = ObsPotentialEnergy(energy, w, energy_ref)
         end
-        if lowercase(key) == lowercase(force_key)
+        if !isnothing(force_key) && lowercase(key)==lowercase(force_key)
             w = (config_type in keys(weights)) ? weights[config_type]["F"] : weights["default"]["F"]
             forces = ObsForces(atoms.data[key].data[:], w)
         end
-        if lowercase(key) == lowercase(virial_key)
+        if !isnothing(virial_key) && lowercase(key)==lowercase(virial_key)
             w = (config_type in keys(weights)) ? weights[config_type]["V"] : weights["default"]["V"]
             m = SMatrix{3,3}(atoms.data[key].data)
             virial = ObsVirial(m, w)

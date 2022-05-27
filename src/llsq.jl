@@ -154,7 +154,7 @@ function assemble_dist_new!(A, Y, W, params, basis)
         force_key = params["data"]["force_key"]
         virial_key = params["data"]["virial_key"]
         weights = params["weights"]
-        data = _atoms_to_data(atoms, energy_key, force_key, virial_key, v_ref, weights)
+        data = _atoms_to_data(atoms, v_ref, weights, energy_key, force_key, virial_key)
         asm_lsq_inner(data)
     end
  
