@@ -117,6 +117,7 @@ LSQR(; damp=5e-3, atol=1e-6, conlim=1e8, maxiter=100000, verbose=false) = LSQR(d
 function solve_llsq(solver::LSQR, A, y)
    println("damp  ", solver.damp)
    println("atol  ", solver.atol)
+   println("maxiter  ", solver.maxiter)
    # preconditioning
    #if !(solver.P == I)
    #   @info("LSQR: Using preconditioning")
