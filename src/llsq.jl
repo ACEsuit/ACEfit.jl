@@ -3,6 +3,7 @@ using LinearAlgebra
 using ACEbase: ACEBasis
 using JuLIP
 using ExtXYZ
+using MPIClusterManagers, Elemental
 
 function llsq!(model, data::AbstractVector, Vref, par = :serial; solver = QR())
    basis = get_basis(model) # should return an ACEBasis 
@@ -157,6 +158,78 @@ function assemble_dist_new!(A, Y, W, params, basis)
         data = _atoms_to_data(atoms, v_ref, weights, energy_key, force_key, virial_key)
         asm_lsq_inner(data)
     end
+ 
+    return nothing
+end
+
+function process_xyz_dict(xyz_dict, v_ref, energy_key, force_key, virial_key, weights, basis)
+    atoms = JuLIP._extxyz_dict_to_atoms(xyz_dict)
+    dat = _atoms_to_data(atoms, v_ref, weights, energy_key, force_key, virial_key)
+    nrows = 0
+    for o in observations(dat)
+        nrows += length(vec_obs(o))
+    end
+    a = zeros(nrows, length(basis))
+    y = zeros(nrows)
+    w = zeros(nrows)
+    row = 0
+    for o in observations(dat)
+        bobs = basis_obs(typeof(o), basis, dat.config)
+        yobs = vec_obs(o)
+        wobs = get_weight(o)
+        if hasproperty(o, :E) || hasproperty(o, :V)
+            wobs = wobs ./ sqrt(length(dat.config))
+        end
+        for j=1:length(basis)
+            aobs = vec_obs(bobs[j])  # todo: must be a more elegant approach
+            for i in 1:length(yobs)
+                a[row+i,j] = wobs*aobs[i]
+            end
+        end
+        for i=1:length(yobs)
+            y[row+i] = wobs*yobs[i]
+            w[row+i] = wobs
+        end
+        row = row + length(yobs)
+    end
+    return a, y, w
+end
+
+function update_matrix!(A, Y, W, row, a, y, w)
+
+    #A
+println("before reserve")
+    Elemental.reserve(A, length(a))
+println("after reserve")
+    for j = 1:size(a,2), i = 1:size(a,1)
+        Elemental.queueUpdate(A, row+i-1, j, a[i,j])
+    end
+    Elemental.processQueues(A)
+
+    #Y
+    Elemental.reserve(Y, length(y))
+    for i = 1:length(y)
+        Elemental.queueUpdate(Y, row+i-1, 1, y[i])
+    end
+    Elemental.processQueues(Y)
+
+    #W
+    Elemental.reserve(W, length(w))
+    for i = 1:length(w)
+        Elemental.queueUpdate(W, row+i-1, 1, w[i])
+    end
+    Elemental.processQueues(W)
+
+end
+
+function assemble_pmap!(A, Y, W,
+                        row, extxyz_dict, 
+                        v_ref, energy_key, force_key, virial_key, weights)
+
+println("beginning to process")
+    a, y, w = process_xyz_dict(xyz_dict, v_ref, energy_key, force_key, virial_key, weights, basis)
+println("beginning to update")
+    update_matrix!(A, Y, W, row, a, y, w)
  
     return nothing
 end

@@ -42,6 +42,24 @@ function count_observations(filename, energy_key, force_key, virial_key)
     return count
 end
 
+function count_observations_new(filename, energy_key, force_key, virial_key)
+    configs = ExtXYZ.read_frames(filename)
+    obs_per_config = zeros(UInt, length(configs))
+    for (i,c) in enumerate(configs)
+        atoms = JuLIP._extxyz_dict_to_atoms(c)
+        for key in keys(atoms.data)
+            if lowercase(key) == lowercase(energy_key)
+                obs_per_config[i] += 1
+            elseif lowercase(key) == lowercase(force_key)
+                obs_per_config[i] += 3*length(atoms)
+            elseif lowercase(key) == lowercase(virial_key)
+                obs_per_config[i] += 6
+            end
+        end
+    end
+    return sum(obs_per_config), obs_per_config, configs
+end
+
 function _atoms_to_data(atoms, v_ref, weights, energy_key=nothing, force_key=nothing, virial_key=nothing)
 
     # wcw todo: subtract force and virial references as well
@@ -155,14 +173,21 @@ end
 
 function error_llsq_new(params, approx, exact)
 
+   v_ref = OneBody(convert(Dict{String,Any},params["e0"]))
+   energy_key = params["data"]["energy_key"]
+   force_key = params["data"]["force_key"]
+   virial_key = params["data"]["virial_key"]
+   weights = params["weights"]
+
    errors = approx - exact
+
    config_types = String[]
    config_counts = Dict("set"=>Dict("E"=>0, "F"=>0, "V"=>0))
    config_errors = Dict("set"=>Dict("E"=>0.0, "F"=>0.0, "V"=>0.0))
    config_norms = Dict("set"=>Dict("E"=>0.0, "F"=>0.0, "V"=>0.0))
    for dict in ExtXYZ.iread_frames(params["data"]["fname"])
        atoms = JuLIP._extxyz_dict_to_atoms(dict)
-       dat = _atoms_to_data(atoms, params)
+       dat = _atoms_to_data(atoms, v_ref, weights, energy_key, force_key, virial_key)
        if !(dat.configtype in config_types)
           push!(config_types, dat.configtype)
           merge!(config_counts, Dict(dat.configtype=>Dict("E"=>0,   "F"=>0,   "V"=>0)))
@@ -174,7 +199,7 @@ function error_llsq_new(params, approx, exact)
    i = 1
    for dict in ExtXYZ.iread_frames(params["data"]["fname"])
       atoms = JuLIP._extxyz_dict_to_atoms(dict)
-      dat = _atoms_to_data(atoms, params)
+      dat = _atoms_to_data(atoms, v_ref, weights, energy_key, force_key, virial_key)
       for o in observations(dat)
          obs_len = length(vec_obs(o))
          obs_errors = errors[i:i+obs_len-1]
