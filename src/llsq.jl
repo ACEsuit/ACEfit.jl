@@ -3,7 +3,7 @@ using LinearAlgebra
 using ACEbase: ACEBasis
 using JuLIP
 using ExtXYZ
-using MPIClusterManagers, Elemental
+#using MPIClusterManagers, Elemental
 
 function llsq!(model, data::AbstractVector, Vref, par = :serial; solver = QR())
    basis = get_basis(model) # should return an ACEBasis 
@@ -197,28 +197,28 @@ end
 
 function update_matrix!(A, Y, W, row, a, y, w)
 
-    #A
-println("before reserve")
-    Elemental.reserve(A, length(a))
-println("after reserve")
-    for j = 1:size(a,2), i = 1:size(a,1)
-        Elemental.queueUpdate(A, row+i-1, j, a[i,j])
-    end
-    Elemental.processQueues(A)
-
-    #Y
-    Elemental.reserve(Y, length(y))
-    for i = 1:length(y)
-        Elemental.queueUpdate(Y, row+i-1, 1, y[i])
-    end
-    Elemental.processQueues(Y)
-
-    #W
-    Elemental.reserve(W, length(w))
-    for i = 1:length(w)
-        Elemental.queueUpdate(W, row+i-1, 1, w[i])
-    end
-    Elemental.processQueues(W)
+#    #A
+#println("before reserve")
+#    Elemental.reserve(A, length(a))
+#println("after reserve")
+#    for j = 1:size(a,2), i = 1:size(a,1)
+#        Elemental.queueUpdate(A, row+i-1, j, a[i,j])
+#    end
+#    Elemental.processQueues(A)
+#
+#    #Y
+#    Elemental.reserve(Y, length(y))
+#    for i = 1:length(y)
+#        Elemental.queueUpdate(Y, row+i-1, 1, y[i])
+#    end
+#    Elemental.processQueues(Y)
+#
+#    #W
+#    Elemental.reserve(W, length(w))
+#    for i = 1:length(w)
+#        Elemental.queueUpdate(W, row+i-1, 1, w[i])
+#    end
+#    Elemental.processQueues(W)
 
 end
 

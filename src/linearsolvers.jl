@@ -49,8 +49,7 @@ struct QR
    P
 end
 
-#QR(; λ = 0.0, P = I) = QR(λ, P)
-QR(; lambda=0.0, P=I) = QR(lambda, P)
+QR(; λ = 0.0, P = I) = QR(λ, P)
          
 function solve_llsq(solver::QR, A, y)
    if solver.λ == 0 
@@ -208,5 +207,18 @@ end
 
 function solve_llsq(solver::BARD, A, y)
    c, _, _, _, _ = BayesianRegression.ard_fit(y, A; verbose=false)
+   return c
+end
+
+@doc raw"""
+Bayesian Ridge Regression SVD
+"""
+struct BayesianRidgeRegressionSVD
+    verbose::Bool
+end
+BayesianRidgeRegressionSVD(; verbose=false) = BayesianRidgeRegressionSVD(verbose)
+
+function solve_llsq(solver::BayesianRidgeRegressionSVD, A, y)
+   c = BayesianRegression.bayesian_ridge_regression_svd(y, A; verbose=solver.verbose)
    return c
 end

@@ -10,7 +10,7 @@ f(\mathbf{x}) = \sum_{i=1}^M c_i \phi_i(\mathbf{x}) = \mathbf{c}^T \boldsymbol{\
 $$
 where the elements of the $M$-dimensional coefficient vector have independent priors $p(c_i)=\mathcal{N}(c_i | 0,\sigma_i^2)$. Suppose $N$ noisy input-target pairs are available, $\{\mathbf{x}_i, y_i\}_{i=1}^N$, such that
 $$
-y_i = f(\mathbf{x}_i) + \epsilon_i, 
+y_i = f(\mathbf{x}_i) + \epsilon_i,
 $$
 with noise prior $p(\epsilon_i) = \mathcal{N}(\epsilon_i | 0,\sigma_\epsilon^2)$.
 
@@ -25,10 +25,11 @@ $$
 \begin{aligned}
 \boldsymbol{\Sigma}_c
 &= \left[ \sigma_\epsilon^{-2} \boldsymbol{\Phi}^T \boldsymbol{\Phi} + \boldsymbol{\Sigma}_0^{-1} \right]^{-1} \\
-&= \boldsymbol{\Sigma}_0 - \boldsymbol{\Sigma}_0 \boldsymbol{\Phi}^T \boldsymbol{\Sigma}_y^{-1} \boldsymbol{\Phi} \boldsymbol{\Sigma}_0
+&= \boldsymbol{\Sigma}_0 - \boldsymbol{\Sigma}_0 \boldsymbol{\Phi}^T \boldsymbol{\Sigma}_y^{-1} \boldsymbol{\Phi} \boldsymbol{\Sigma}_0 \\
+&= \mathbf{V} \left[\sigma_\epsilon^{-2} \mathbf{D}^T \mathbf{D} + \mathbf{V}^T \boldsymbol{\Sigma}_0^{-1} \mathbf{V} \right]^{-1} \mathbf{V}^T
 \end{aligned} ,
 $$
-where $\boldsymbol{\Phi}$ is the design matrix 
+where $\boldsymbol{\Phi}$ is the design matrix
 $$
 \boldsymbol{\Phi} = \left[
 \begin{matrix}
@@ -39,11 +40,13 @@ $$
 \end{matrix}
 \right] ,
 $$
-$\boldsymbol{\Sigma}_0$ is diagonal with $[\boldsymbol{\Sigma}_0]_{ii} = \sigma_i^2$, and $\boldsymbol{\Sigma}_y$ is defined below.
+$\boldsymbol{\Sigma}_0$ is diagonal with $[\boldsymbol{\Sigma}_0]_{ii} = \sigma_i^2$, and $\boldsymbol{\Sigma}_y$ is defined below. Some formulas rely on the singular value decomposition of the design matrix
+$$
+\boldsymbol{\Phi} = \boldsymbol{U} \boldsymbol{D} \boldsymbol{V}^T
+$$
 
 ### Likelihood and log likelihood
-
-With flat hyperpriors, the marginal likelihood---the "evidence" for the model---is
+With flat hyperpriors, the marginal likelihood---the "evidence for the model"---is
 $$
 p(\mathbf{y} | \boldsymbol{\Sigma}_0, \sigma_\epsilon^2) = \mathcal{N}(\mathbf{y} | \mathbf{0}, \boldsymbol{\Sigma}_y)
 $$
@@ -61,7 +64,7 @@ $$
 \mathrm{\mathcal{L}}
 &= \ln p(\mathbf{y} | \boldsymbol{\Sigma}_0, \sigma_\epsilon^2) \\
 &= -\frac{1}{2} \mathbf{y}^T \boldsymbol{\Sigma}_y^{-1} \mathbf{y}
-    - \frac{1}{2} \ln \left| \boldsymbol{\Sigma}_y \right| 
+    - \frac{1}{2} \ln \left| \boldsymbol{\Sigma}_y \right|
     - \frac{N}{2} \ln (2\pi) \\
 &= -\frac{1}{2} \sigma_\epsilon^{-2} \mathbf{y}^T \left[  \mathbf{y} - \boldsymbol{\Phi} \boldsymbol{\mu}_c \right]
     + \frac{1}{2} \ln \left| \boldsymbol{\Sigma}_c \right|
@@ -84,12 +87,61 @@ $$
 \begin{aligned}
 \frac{\partial \mathcal{L}}{\partial \sigma_\epsilon^2}
 & = \frac{1}{2} \left\| \boldsymbol{\Sigma}_y^{-1} \mathbf{y} \right\|^2 - \frac{1}{2} \mathrm{tr}\left(\boldsymbol{\Sigma}_y^{-1}\right) \\
-&= \frac{1}{2} \sigma_\epsilon^{-4} \left[ 
+&= \frac{1}{2} \sigma_\epsilon^{-4} \left[
     \left\| \mathbf{y} - \boldsymbol{\Phi} \boldsymbol{\mu}_c \right\|^2
-    + \mathrm{tr}\left( \boldsymbol{\Phi} \boldsymbol{\Sigma}_c \boldsymbol{\Phi}^T \right) 
+    + \mathrm{tr}\left( \boldsymbol{\Phi} \boldsymbol{\Sigma}_c \boldsymbol{\Phi}^T \right)
     - N \sigma_\epsilon^2
 \right]
 \end{aligned} .
+$$
+
+### Special case of Bayesian Ridge Regression
+
+For the simpler case of Bayesian Ridge Regression, defined by
+
+$$
+\boldsymbol{\Sigma}_0 = \sigma_0^2 \mathbf{I},
+$$
+
+the formulas reduce to
+
+$$
+\boldsymbol{\mu}_c = \sigma_\epsilon^{-2} \mathbf{V} \left[\sigma_\epsilon^{-2} \mathbf{D}^T \mathbf{D} + \sigma_0^{-2} \mathbf{I} \right]^{-1} \mathbf{D}^T \mathbf{U}^T \mathbf{y}
+$$
+
+$$
+\boldsymbol{\Sigma}_c
+= \mathbf{V} \left[\sigma_\epsilon^{-2} \mathbf{D}^T \mathbf{D} + \sigma_0^{-2} \mathbf{I} \right]^{-1} \mathbf{V}^T
+$$
+
+$$
+\begin{aligned}
+\mathrm{\mathcal{L}}
+= &- \frac{1}{2} \sum_{i=1}^r \frac{[\mathbf{U}^T \mathbf{y}]_i^2}{\sigma_0^2 d_i^2 + \sigma_\epsilon^2}
+    - \frac{1}{2} \sum_{i=r+1}^N \frac{[\mathbf{U}^T \mathbf{y}]_i^2}{\sigma_\epsilon^2} 
+\\
+    &- \frac{1}{2} \ln \prod_{i=1}^r (\sigma_0^2 d_i^2 + \sigma_\epsilon^2)
+    - \frac{N-r}{2} \ln (\sigma_\epsilon^2)
+\\
+    &- \frac{N}{2} \ln (2\pi) \\
+\end{aligned}
+$$
+
+$$
+\frac{\partial \mathcal{L}}{\partial \sigma_0^2}
+= \frac{1}{2} \sum_{i=1}^r \frac{[\mathbf{U}^T \mathbf{y}]_i^2 d_i^2}{(\sigma_0^2 d_i^2 + \sigma_\epsilon^2)^2}
+    - \frac{1}{2} \sum_{i=1}^r \frac{d_i^2}{\sigma_0^2 d_i^2 + \sigma_\epsilon^2}
+$$
+
+$$
+\begin{aligned}
+\frac{\partial \mathcal{L}}{\partial \sigma_\epsilon^2}
+= &\frac{1}{2} \sum_{i=1}^r \frac{[\mathbf{U}^T \mathbf{y}]_i^2}{(\sigma_0^2 d_i^2 + \sigma_\epsilon^2)^2}
+    + \frac{1}{2} \sum_{i=r+1}^N \frac{[\mathbf{U}^T \mathbf{y}]_i^2}{\sigma_\epsilon^4}
+\\
+    &- \frac{1}{2} \sum_{i=1}^r \frac{1}{\sigma_0^2 d_i^2 + \sigma_\epsilon^2}
+    - \frac{N-r}{2\sigma_\epsilon^2}
+\end{aligned}
 $$
 
 ### References
@@ -278,7 +330,7 @@ function ard_fit(
     res = optimize(Optim.only_fg!(fg!),
                    ones(size(X,2)+1),
                    Optim.LBFGS(),
-                   Optim.Options(x_tol=1e-4, g_tol=0.0, show_trace=verbose))
+                   Optim.Options(x_tol=1e-6, g_tol=0.0, show_trace=verbose))
     verbose && println(res)
 
     lml = -Optim.minimum(res)
@@ -293,6 +345,68 @@ function ard_fit(
     c[mask] .= c_mask
 
     return c, var_c, var_e, lml, mask
+end
+
+function bayesian_ridge_regression_svd(
+    Y::Vector{<:AbstractFloat},
+    X::Matrix{<:AbstractFloat};
+    variance_floor::AbstractFloat=1e-8,
+    verbose::Bool=false
+)
+    U, S, V = svd(X; full=true)
+    UT_Y = transpose(U) * Y
+
+    function log_marginal_likelihood!(lml, grad_lml, var_0, var_e)
+        lml = 0.0
+        dlml_d0 = 0.0
+        dlml_de = 0.0
+        for i in 1:length(S)
+            ut_y = UT_Y[i]
+            s = S[i]
+            t = var_0*s*s + var_e
+            lml += -0.5*ut_y*ut_y/t -0.5*log(t)
+            dlml_d0 += 0.5*ut_y*ut_y*s*s/(t*t) -0.5*s*s/t
+            dlml_de += 0.5*ut_y*ut_y/(t*t) -0.5/t
+        end
+        for i in (length(S)+1):size(X,1)
+            ut_y = UT_Y[i]
+            lml += -0.5*ut_y*ut_y/var_e
+            dlml_de += 0.5*ut_y*ut_y/(var_e*var_e)
+        end
+        lml += -0.5*(size(X,1)-length(S))*log(var_e)
+        dlml_de += -0.5*(size(X,1)-length(S))/var_e
+        lml += -0.5*size(X,1)*log(2*pi)
+        grad_lml .= [dlml_d0, dlml_de]
+        return lml
+    end
+
+    function fg!(f, g, x)
+        var_0, var_e = variance_floor .+ x.^2
+        f = log_marginal_likelihood!(f, g, var_0, var_e)
+        if f != nothing
+            f = -f
+        end
+        if g != nothing
+            g .*= -2*x
+        end
+        return f
+    end
+
+    res = optimize(Optim.only_fg!(fg!),
+                   ones(2),
+                   Optim.LBFGS(),
+                   Optim.Options(x_tol=1e-6, g_tol=0.0, show_trace=verbose))
+
+    lml = -Optim.minimum(res)
+    var_0, var_e = variance_floor .+ Optim.minimizer(res).^2
+
+    for i in 1:length(S)
+        s = S[i]
+        UT_Y[i] *= var_0*s / (var_0*s*s + var_e)
+    end
+    mu = V * UT_Y[1:length(S)]
+
+    return mu
 end
 
 end
