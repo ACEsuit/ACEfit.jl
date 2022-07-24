@@ -348,12 +348,13 @@ function ard_fit(
 end
 
 function bayesian_ridge_regression_svd(
-    Y::Vector{<:AbstractFloat},
-    X::Matrix{<:AbstractFloat};
+    X::Matrix{<:AbstractFloat},
+    Y::Vector{<:AbstractFloat};
     variance_floor::AbstractFloat=1e-8,
+    ensemble_size::Int=0,
     verbose::Bool=false
 )
-    U, S, V = svd(X; full=true)
+    U, S, V = svd(X; full=true, alg=LinearAlgebra.QRIteration())
     UT_Y = transpose(U) * Y
 
     function log_marginal_likelihood!(lml, grad_lml, var_0, var_e)
@@ -361,17 +362,14 @@ function bayesian_ridge_regression_svd(
         dlml_d0 = 0.0
         dlml_de = 0.0
         for i in 1:length(S)
-            ut_y = UT_Y[i]
-            s = S[i]
-            t = var_0*s*s + var_e
-            lml += -0.5*ut_y*ut_y/t -0.5*log(t)
-            dlml_d0 += 0.5*ut_y*ut_y*s*s/(t*t) -0.5*s*s/t
-            dlml_de += 0.5*ut_y*ut_y/(t*t) -0.5/t
+            t = var_0*S[i]*S[i] + var_e
+            lml += -0.5*UT_Y[i]*UT_Y[i]/t - 0.5*log(t)
+            dlml_d0 += 0.5*UT_Y[i]*UT_Y[i]*S[i]*S[i]/(t*t) - 0.5*S[i]*S[i]/t
+            dlml_de += 0.5*UT_Y[i]*UT_Y[i]/(t*t) - 0.5/t
         end
         for i in (length(S)+1):size(X,1)
-            ut_y = UT_Y[i]
-            lml += -0.5*ut_y*ut_y/var_e
-            dlml_de += 0.5*ut_y*ut_y/(var_e*var_e)
+            lml += -0.5*UT_Y[i]*UT_Y[i]/var_e
+            dlml_de += 0.5*UT_Y[i]*UT_Y[i]/(var_e*var_e)
         end
         lml += -0.5*(size(X,1)-length(S))*log(var_e)
         dlml_de += -0.5*(size(X,1)-length(S))/var_e
@@ -396,17 +394,23 @@ function bayesian_ridge_regression_svd(
                    ones(2),
                    Optim.LBFGS(),
                    Optim.Options(x_tol=1e-6, g_tol=0.0, show_trace=verbose))
-
     lml = -Optim.minimum(res)
     var_0, var_e = variance_floor .+ Optim.minimizer(res).^2
 
-    for i in 1:length(S)
-        s = S[i]
-        UT_Y[i] *= var_0*s / (var_0*s*s + var_e)
-    end
-    mu = V * UT_Y[1:length(S)]
+    UT_Y[1:length(S)] .*= var_0.*S ./ (var_0.*S.*S .+ var_e)
+    c = V * UT_Y[1:length(S)]
 
-    return mu
+    if ensemble_size==0
+        return c, var_0, var_e
+    else
+        ensemble = zeros(size(X,2), ensemble_size)
+        sqrt_covar = 1.0 ./ sqrt.(S.*S/var_e .+ 1.0/var_0)
+        for i = 1:ensemble_size
+            ensemble[:,i] .= c + V*Diagonal(sqrt_covar)*transpose(V)*randn(size(X,2))
+        end
+        return c, var_0, var_e, ensemble
+    end
+
 end
 
 end

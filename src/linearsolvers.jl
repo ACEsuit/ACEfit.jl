@@ -224,6 +224,6 @@ end
 BayesianRidgeRegressionSVD(; verbose=false) = BayesianRidgeRegressionSVD(verbose)
 
 function solve_llsq(solver::BayesianRidgeRegressionSVD, A, y)
-   c = BayesianRegression.bayesian_ridge_regression_svd(y, A; verbose=solver.verbose)
+   c, var_0, var_e = BayesianRegression.bayesian_ridge_regression_svd(A, y; verbose=solver.verbose)
    return c
 end
