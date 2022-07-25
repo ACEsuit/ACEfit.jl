@@ -16,20 +16,17 @@ function create_solver(params::Dict)
     delete!(params, "type")
     params = Dict(Symbol(k)=>v for (k,v) in pairs(params))
     if solver == "QR"
-        #return QR(; params...)
         return QR(; params...)
     elseif solver == "LSQR"
         #return LSQR(; params...)
         return LSQR(; damp=params[:lsqr_damp], atol=params[:lsqr_atol], conlim=params[:lsqr_conlim], maxiter=params[:lsqr_maxiter], verbose=params[:lsqr_verbose])
     elseif solver == "RRQR"
         #return RRQR(; params...)
-        return RRQR(; tol=params[:rrqr_tol])
+        return RRQR(; rtol=params[:rrqr_tol])
     elseif solver == "SKLEARN_BRR"
-        #return SKLEARN_BRR(; params...)
-        return SKLEARN_BRR(; n_iter=params[:brr_n_iter], tol=params[:brr_tol])
+        return SKLEARN_BRR(; params...)
     elseif solver == "SKLEARN_ARD"
-        #return SKLEARN_ARD(; params...)
-        return SKLEARN_ARD(; n_iter=params[:ard_n_iter], tol=params[:ard_tol], threshold_lambda=params[:ard_threshold_lambda])
+        return SKLEARN_ARD(; params...)
     else
         @error "ACEfit.create_solver does not recognize $(solver)."
     end
@@ -50,18 +47,18 @@ where
 * `P` : right-preconditioner / tychonov operator
 """
 struct QR
-   λ::Number
+   lambda::Number
    P
 end
 
-QR(; λ = 0.0, P = I) = QR(λ, P)
+QR(; lambda = 0.0, P = I) = QR(lambda, P)
          
 function solve_llsq(solver::QR, A, y)
-   if solver.λ == 0 
+   if solver.lambda == 0 
       AP = A 
       yP = y 
    else 
-      AP = [A; solver.λ * solver.P]
+      AP = [A; solver.lambda * solver.P]
       yP = [y; zeros(eltype(y), size(A, 2))]
    end 
    return qr(AP) \ yP
