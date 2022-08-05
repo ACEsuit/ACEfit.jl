@@ -8,7 +8,7 @@ ensemble_size = 20000
 X = float.([1 0 0; 1 1 0; 0 2 1])
 Y = float.([1; 2; 1])
 mean, var_0, var_e, ensemble = 
-    ACEfit.BayesianRegression.bayesian_ridge_regression_svd(
+    ACEfit.BayesianRegression.bayesian_linear_regression_svd(
         X, Y; ensemble_size=ensemble_size)
 # test mean
 mean_approx = sum(ensemble; dims=2) / ensemble_size

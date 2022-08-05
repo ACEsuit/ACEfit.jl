@@ -2,6 +2,7 @@ using LinearAlgebra: qr, I, norm
 using LowRankApprox: pqrfact
 using IterativeSolvers
 using PyCall
+using .BayesianLinear
 
 @doc raw"""
 create_solver(params::Dict)
@@ -26,6 +27,8 @@ function create_solver(params::Dict)
         return SKLEARN_BRR(; params...)
     elseif solver == "SKLEARN_ARD"
         return SKLEARN_ARD(; params...)
+    elseif solver == "BLR"
+        return BayesianLinearRegressionSVD(; params...)
     else
         @error "ACEfit.create_solver does not recognize $(solver)."
     end
@@ -178,7 +181,7 @@ function solve_llsq(solver::SKLEARN_ARD, A, y)
 end
 
 @doc raw"""
-Bayesian Linear
+Bayesian Linear Regression
 """
 struct BL
 end
@@ -200,14 +203,14 @@ function solve_llsq(solver::BARD, A, y)
 end
 
 @doc raw"""
-Bayesian Ridge Regression SVD
+Bayesian Linear Regression SVD
 """
-struct BayesianRidgeRegressionSVD
+struct BayesianLinearRegressionSVD
     verbose::Bool
 end
-BayesianRidgeRegressionSVD(; verbose=false) = BayesianRidgeRegressionSVD(verbose)
+BayesianLinearRegressionSVD(; verbose=false) = BayesianLinearRegressionSVD(verbose)
 
-function solve_llsq(solver::BayesianRidgeRegressionSVD, A, y)
-   c, var_0, var_e = bayesian_ridge_regression_svd(A, y; verbose=solver.verbose)
+function solve_llsq(solver::BayesianLinearRegressionSVD, A, y)
+   c, var_0, var_e = bayesian_linear_regression_svd(A, y; verbose=solver.verbose)
    return c
 end

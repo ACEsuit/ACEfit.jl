@@ -1,6 +1,6 @@
-module BayesianLinearRegression
+module BayesianLinear
 
-export bayesian_fit, ard_fit, bayesian_ridge_regression_svd 
+export bayesian_fit, ard_fit, bayesian_linear_regression_svd
 
 #=
 
@@ -349,7 +349,7 @@ function ard_fit(
     return c, var_c, var_e, lml, mask
 end
 
-function bayesian_ridge_regression_svd(
+function bayesian_linear_regression_svd(
     X::Matrix{<:AbstractFloat},
     Y::Vector{<:AbstractFloat};
     variance_floor::AbstractFloat=1e-8,
