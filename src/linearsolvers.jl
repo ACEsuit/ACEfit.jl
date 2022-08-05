@@ -184,7 +184,7 @@ struct BL
 end
 
 function solve_llsq(solver::BL, A, y)
-   c, _, _, _ = BayesianRegression.bayesian_fit(y, A; verbose=false)
+   c, _, _, _ = bayesian_fit(y, A; verbose=false)
    return c
 end
 
@@ -195,7 +195,7 @@ struct BARD
 end
 
 function solve_llsq(solver::BARD, A, y)
-   c, _, _, _, _ = BayesianRegression.ard_fit(y, A; verbose=false)
+   c, _, _, _, _ = ard_fit(y, A; verbose=false)
    return c
 end
 
@@ -208,6 +208,6 @@ end
 BayesianRidgeRegressionSVD(; verbose=false) = BayesianRidgeRegressionSVD(verbose)
 
 function solve_llsq(solver::BayesianRidgeRegressionSVD, A, y)
-   c, var_0, var_e = BayesianRegression.bayesian_ridge_regression_svd(A, y; verbose=solver.verbose)
+   c, var_0, var_e = bayesian_ridge_regression_svd(A, y; verbose=solver.verbose)
    return c
 end

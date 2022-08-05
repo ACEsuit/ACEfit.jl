@@ -1,4 +1,6 @@
-module BayesianRegression
+module BayesianLinearRegression
+
+export bayesian_fit, ard_fit, bayesian_ridge_regression_svd 
 
 #=
 
