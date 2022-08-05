@@ -15,7 +15,7 @@ using ExtXYZ
 function llsq(basis, data::AbstractVector, Vref, par = :serial; solver = QR())
    if par == :serial
       _iterate = siterate
-      A, y, w = llsq_assemble(basis, data, _iterate)
+      A, y, w = assemble_llsq(basis, data, _iterate)
       c = solve_llsq(solver, A, y)
       config_errors = error_llsq(data, (A*c)./w, y./w)
       IP = JuLIP.MLIPs.combine(basis, c)
@@ -28,18 +28,17 @@ function llsq(basis, data::AbstractVector, Vref, par = :serial; solver = QR())
    end
 end
 
-function llsq_assemble(basis, data, _iterate)
+function assemble_llsq(basis, data, _iterate)
 
-   _, Nobs = get_lsq_indices(data)
+   _, num_obs = get_lsq_indices(data)
 
-   println("Creating design matrix with size (", Nobs, ", ", length(basis), ")")
-   A = zeros(Nobs, length(basis))
-   Y = zeros(Nobs)
-   W = zeros(Nobs)
+   println("Creating design matrix with size (", num_obs, ", ", length(basis), ")")
+   A = zeros(num_obs, length(basis))
+   Y = zeros(num_obs)
+   W = zeros(num_obs)
    
    # inner assembly (this knows about A and Y)
    idx = 1
-   # TODO: i0 is not used anymore, should revisit
    function asm_lsq_inner(i0, dat)
       for o in observations(dat)
          # TODO: this isn't type stable; for very cheap models, this inner 
@@ -66,37 +65,4 @@ function llsq_assemble(basis, data, _iterate)
    _iterate(asm_lsq_inner, data)
 
    return A, Y, W
-end
-
-function process_xyz_dict(xyz_dict, v_ref, energy_key, force_key, virial_key, weights, basis)
-    atoms = JuLIP._extxyz_dict_to_atoms(xyz_dict)
-    dat = _atoms_to_data(atoms, v_ref, weights, energy_key, force_key, virial_key)
-    nrows = 0
-    for o in observations(dat)
-        nrows += length(vec_obs(o))
-    end
-    a = zeros(nrows, length(basis))
-    y = zeros(nrows)
-    w = zeros(nrows)
-    row = 0
-    for o in observations(dat)
-        bobs = basis_obs(typeof(o), basis, dat.config)
-        yobs = vec_obs(o)
-        wobs = get_weight(o)
-        if hasproperty(o, :E) || hasproperty(o, :V)
-            wobs = wobs ./ sqrt(length(dat.config))
-        end
-        for j=1:length(basis)
-            aobs = vec_obs(bobs[j])  # todo: must be a more elegant approach
-            for i in 1:length(yobs)
-                a[row+i,j] = wobs*aobs[i]
-            end
-        end
-        for i=1:length(yobs)
-            y[row+i] = wobs*yobs[i]
-            w[row+i] = wobs
-        end
-        row = row + length(yobs)
-    end
-    return a, y, w
 end
