@@ -1,13 +1,4 @@
-### this file is temporary. it holds some random bits that I need to organize
-
-# todo - move this to ACEbase I think 
-# wcw: fix these hacks
-function get_basis(m::Any)
-    return m
-end
-function set_params!(m::Any, x::Any)
-    return m
-end
+### this file holds some random bits that should likely go elsewhere
 
 function get_lsq_indices(data)
    # count the number of observations and assign indices in the lsq matrix
@@ -26,38 +17,20 @@ function get_lsq_indices(data)
 end
 
 function count_observations(filename, energy_key, force_key, virial_key)
-    count = 0
+    observations = 0
     for dict in ExtXYZ.iread_frames(filename)
         atoms = JuLIP._extxyz_dict_to_atoms(dict)
         for key in keys(atoms.data)
             if lowercase(key) == lowercase(energy_key)
-                count += 1
+                observations += 1
             elseif lowercase(key) == lowercase(force_key)
-                count += 3*length(atoms)
+                observations += 3*length(atoms)
             elseif lowercase(key) == lowercase(virial_key)
-                count += 6
+                observations += 6
             end
         end
     end
-    return count
-end
-
-function count_observations_new(filename, energy_key, force_key, virial_key)
-    configs = ExtXYZ.read_frames(filename)
-    obs_per_config = zeros(UInt, length(configs))
-    for (i,c) in enumerate(configs)
-        atoms = JuLIP._extxyz_dict_to_atoms(c)
-        for key in keys(atoms.data)
-            if lowercase(key) == lowercase(energy_key)
-                obs_per_config[i] += 1
-            elseif lowercase(key) == lowercase(force_key)
-                obs_per_config[i] += 3*length(atoms)
-            elseif lowercase(key) == lowercase(virial_key)
-                obs_per_config[i] += 6
-            end
-        end
-    end
-    return sum(obs_per_config), obs_per_config, configs
+    return observations
 end
 
 function _atoms_to_data(atoms, v_ref, weights, energy_key=nothing, force_key=nothing, virial_key=nothing)

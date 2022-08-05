@@ -19,6 +19,9 @@ include("obs.jl")
 # linear least squares assembly for linear models
 include("llsq.jl")
 
+# bayesian linear solvers
+include("bayesianlinear.jl")
+
 # linear least squares solvers for linear models
 include("linearsolvers.jl")
 

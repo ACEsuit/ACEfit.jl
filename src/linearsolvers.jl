@@ -3,33 +3,29 @@ using LowRankApprox: pqrfact
 using IterativeSolvers
 using PyCall
 
-include("bayesianlinear.jl")
-
-# TODO: 
-#   - read_dict, write_dict 
-
 @doc raw"""
-create_solver
+create_solver(params::Dict)
+
+Convenience function for creating a solver. The `params` should contain
+a `type`, whose value is a solver type. The remaining `params` are passed
+as keyword arguments to the solver's constructor.
+
+Valid solver types: "QR, LSQR, RRQR, SKLEARN_BRR, SKLEARN_ARD"
 """
 function create_solver(params::Dict)
     solver = uppercase(params["type"])
     delete!(params, "type")
     params = Dict(Symbol(k)=>v for (k,v) in pairs(params))
     if solver == "QR"
-        #return QR(; params...)
         return QR(; params...)
     elseif solver == "LSQR"
-        #return LSQR(; params...)
-        return LSQR(; damp=params[:lsqr_damp], atol=params[:lsqr_atol], conlim=params[:lsqr_conlim], maxiter=params[:lsqr_maxiter], verbose=params[:lsqr_verbose])
+        return LSQR(; params...)
     elseif solver == "RRQR"
-        #return RRQR(; params...)
-        return RRQR(; tol=params[:rrqr_tol])
+        return RRQR(; params...)
     elseif solver == "SKLEARN_BRR"
-        #return SKLEARN_BRR(; params...)
-        return SKLEARN_BRR(; n_iter=params[:brr_n_iter], tol=params[:brr_tol])
+        return SKLEARN_BRR(; params...)
     elseif solver == "SKLEARN_ARD"
-        #return SKLEARN_ARD(; params...)
-        return SKLEARN_ARD(; n_iter=params[:ard_n_iter], tol=params[:ard_tol], threshold_lambda=params[:ard_threshold_lambda])
+        return SKLEARN_ARD(; params...)
     else
         @error "ACEfit.create_solver does not recognize $(solver)."
     end
@@ -50,18 +46,18 @@ where
 * `P` : right-preconditioner / tychonov operator
 """
 struct QR
-   λ::Number
+   lambda::Number
    P
 end
 
-QR(; λ = 0.0, P = I) = QR(λ, P)
+QR(; lambda = 0.0, P = I) = QR(lambda, P)
          
 function solve_llsq(solver::QR, A, y)
-   if solver.λ == 0 
+   if solver.lambda == 0 
       AP = A 
       yP = y 
    else 
-      AP = [A; solver.λ * solver.P]
+      AP = [A; solver.lambda * solver.P]
       yP = [y; zeros(eltype(y), size(A, 2))]
    end 
    return qr(AP) \ yP
@@ -135,18 +131,6 @@ function solve_llsq(solver::LSQR, A, y)
    return c
 end
 
-function solve_llsq(solver::LSQR, A::DArray, y::DArray)
-   println("hello from solve_llsq dist")
-   println("damp  ", solver.damp)
-   println("atol  ", solver.atol)
-   c = dzeros((size(A,2),), [1])
-   c, ch = lsqr!(c, A, y; damp=solver.damp, atol=solver.atol, conlim=solver.conlim,
-                          maxiter=solver.maxiter, verbose=solver.verbose, log=true)
-   println(ch)
-   println("relative RMS error  ", norm(A*c - y) / norm(y))
-   return convert(Vector, c)
-end
-
 @doc raw"""
 SKLEARN_BRR
 """
@@ -200,7 +184,7 @@ struct BL
 end
 
 function solve_llsq(solver::BL, A, y)
-   c, _, _, _ = BayesianRegression.bayesian_fit(y, A; verbose=false)
+   c, _, _, _ = bayesian_fit(y, A; verbose=false)
    return c
 end
 
@@ -211,7 +195,7 @@ struct BARD
 end
 
 function solve_llsq(solver::BARD, A, y)
-   c, _, _, _, _ = BayesianRegression.ard_fit(y, A; verbose=false)
+   c, _, _, _, _ = ard_fit(y, A; verbose=false)
    return c
 end
 
@@ -224,6 +208,6 @@ end
 BayesianRidgeRegressionSVD(; verbose=false) = BayesianRidgeRegressionSVD(verbose)
 
 function solve_llsq(solver::BayesianRidgeRegressionSVD, A, y)
-   c, var_0, var_e = BayesianRegression.bayesian_ridge_regression_svd(A, y; verbose=solver.verbose)
+   c, var_0, var_e = bayesian_ridge_regression_svd(A, y; verbose=solver.verbose)
    return c
 end
