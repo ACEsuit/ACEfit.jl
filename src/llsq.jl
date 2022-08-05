@@ -14,7 +14,7 @@ function llsq(basis, data::AbstractVector, Vref, par = :serial; solver = QR())
 
    if par == :serial
       _iterate = siterate
-      A, y, w = asm_llsq(basis, data, _iterate)
+      A, y, w = llsq_assemble(basis, data, _iterate)
       c = solve_llsq(solver, A, y)
       config_errors = error_llsq(data, (A*c)./w, y./w)
       IP = JuLIP.MLIPs.combine(basis, c)
