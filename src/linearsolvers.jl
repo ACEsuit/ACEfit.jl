@@ -3,13 +3,14 @@ using LowRankApprox: pqrfact
 using IterativeSolvers
 using PyCall
 
-include("bayesianlinear.jl")
-
-# TODO: 
-#   - read_dict, write_dict 
-
 @doc raw"""
-create_solver
+    create_solver(params::Dict)
+
+Convenience function for creating a solver. The `params` should contain
+a `type`, whose value is a solver type. The remaining `params` are passed
+as keyword arguments to the solver's constructor.
+
+Valid solver types: "QR, LSQR, RRQR, SKLEARN_BRR, SKLEARN_ARD"
 """
 function create_solver(params::Dict)
     solver = uppercase(params["type"])
@@ -130,18 +131,6 @@ function solve_llsq(solver::LSQR, A, y)
    println(ch)
    println("relative RMS error  ", norm(A*c - y) / norm(y))
    return c
-end
-
-function solve_llsq(solver::LSQR, A::DArray, y::DArray)
-   println("hello from solve_llsq dist")
-   println("damp  ", solver.damp)
-   println("atol  ", solver.atol)
-   c = dzeros((size(A,2),), [1])
-   c, ch = lsqr!(c, A, y; damp=solver.damp, atol=solver.atol, conlim=solver.conlim,
-                          maxiter=solver.maxiter, verbose=solver.verbose, log=true)
-   println(ch)
-   println("relative RMS error  ", norm(A*c - y) / norm(y))
-   return convert(Vector, c)
 end
 
 @doc raw"""
