@@ -4,7 +4,7 @@ using IterativeSolvers
 using PyCall
 
 @doc raw"""
-    create_solver(params::Dict)
+create_solver(params::Dict)
 
 Convenience function for creating a solver. The `params` should contain
 a `type`, whose value is a solver type. The remaining `params` are passed
@@ -19,11 +19,9 @@ function create_solver(params::Dict)
     if solver == "QR"
         return QR(; params...)
     elseif solver == "LSQR"
-        #return LSQR(; params...)
-        return LSQR(; damp=params[:lsqr_damp], atol=params[:lsqr_atol], conlim=params[:lsqr_conlim], maxiter=params[:lsqr_maxiter], verbose=params[:lsqr_verbose])
+        return LSQR(; params...)
     elseif solver == "RRQR"
-        #return RRQR(; params...)
-        return RRQR(; rtol=params[:rrqr_tol])
+        return RRQR(; params...)
     elseif solver == "SKLEARN_BRR"
         return SKLEARN_BRR(; params...)
     elseif solver == "SKLEARN_ARD"
