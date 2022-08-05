@@ -1,13 +1,4 @@
-### this file is temporary. it holds some random bits that I need to organize
-
-# todo - move this to ACEbase I think 
-# wcw: fix these hacks
-function get_basis(m::Any)
-    return m
-end
-function set_params!(m::Any, x::Any)
-    return m
-end
+### this file holds some random bits that should likely go elsewhere
 
 function get_lsq_indices(data)
    # count the number of observations and assign indices in the lsq matrix

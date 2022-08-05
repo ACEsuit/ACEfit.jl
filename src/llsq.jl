@@ -3,15 +3,16 @@ using ACEbase: ACEBasis
 using JuLIP
 using ExtXYZ
 
-function llsq!(model, data::AbstractVector, Vref, par = :serial; solver = QR())
-   basis = get_basis(model) # should return an ACEBasis 
-   IP, errors = llsq(basis, data, Vref, par; solver = solver)
-   #set_params!(model, θ)
-   return IP, errors
-end
+# TODO: will likely be useful to return to this more abstract approach eventually.
+#       requires defining get_basis and set_params
+#function llsq!(model, data::AbstractVector, Vref, par = :serial; solver = QR())
+#   basis = get_basis(model) # should return an ACEBasis 
+#   IP, errors = llsq(basis, data, Vref, par; solver = solver)
+#   set_params!(model, θ)
+#   return IP, errors
+#end
 
 function llsq(basis, data::AbstractVector, Vref, par = :serial; solver = QR())
-
    if par == :serial
       _iterate = siterate
       A, y, w = llsq_assemble(basis, data, _iterate)
