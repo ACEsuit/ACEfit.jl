@@ -25,6 +25,22 @@ function llsq(basis, data::AbstractVector, Vref, par = :serial; solver = QR())
    end
 end
 
+function get_lsq_indices(data)
+   # count the number of observations and assign indices in the lsq matrix
+   # we do this always in serial since it should take essentially no time
+   # (but what if the data lives distributed???)
+   Nobs = 0
+   firstidx = zeros(Int, length(data))
+   function count_Nobs(i, dat)
+      firstidx[i] = Nobs + 1
+      for o in ACEfit.observations(dat)
+         Nobs += length(ACEfit.vec_obs(o))
+      end
+   end
+   ACEfit.siterate(count_Nobs, data)
+   return firstidx, Nobs
+end
+
 function assemble_llsq(basis, data, _iterate)
 
    _, num_obs = get_lsq_indices(data)
