@@ -22,6 +22,4 @@ include("bayesianlinear.jl")
 # linear least squares solvers for linear models
 include("linearsolvers.jl")
 
-include("helper.jl")
-
 end
