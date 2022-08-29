@@ -14,12 +14,7 @@ function llsq(basis, data::AbstractVector, Vref, par = :serial; solver = QR())
       _iterate = siterate
       A, y, w = assemble_llsq(basis, data, _iterate)
       c = solve_llsq(solver, A, y)
-      config_errors = error_llsq(data, (A*c)./w, y./w)
-      #IP = JuLIP.MLIPs.combine(basis, c)
-      #if Vref != nothing
-      #   IP = JuLIP.MLIPs.SumIP(Vref, IP)
-      #end
-      return IP, config_errors
+      return A, y, w, c
    else 
       error("unknown assembly type")
    end
