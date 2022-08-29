@@ -1,7 +1,7 @@
 
 import Base: ==, convert
 
-import ACEbase: read_dict, write_dict
+#import ACEbase: read_dict, write_dict
 
 export Dat, eval_obs, observations, vec_obs, devec_obs, 
        set_weights! 
@@ -69,12 +69,12 @@ write_dict(d::Dat) =
          "meta" => d.meta)
 
 
-Dat(D::Dict) = Dat( read_dict(D["config"]), 
-                    D["configtype"],
-                    Vector{Any}(D["obs"]), 
-                    Dict{String, Any}(D["meta"]) )
-
-read_dict(::Val{:ACEfit_Dat}, D::Dict) = Dat(D)
+#Dat(D::Dict) = Dat( read_dict(D["config"]), 
+#                    D["configtype"],
+#                    Vector{Any}(D["obs"]), 
+#                    Dict{String, Any}(D["meta"]) )
+#
+#read_dict(::Val{:ACEfit_Dat}, D::Dict) = Dat(D)
 
 observations(d::Dat) = d.obs 
 

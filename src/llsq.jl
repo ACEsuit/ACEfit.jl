@@ -1,7 +1,4 @@
 using LinearAlgebra
-using ACEbase: ACEBasis
-using JuLIP
-using ExtXYZ
 
 # TODO: will likely be useful to return to this more abstract approach eventually.
 #       requires defining get_basis and set_params
@@ -18,10 +15,10 @@ function llsq(basis, data::AbstractVector, Vref, par = :serial; solver = QR())
       A, y, w = assemble_llsq(basis, data, _iterate)
       c = solve_llsq(solver, A, y)
       config_errors = error_llsq(data, (A*c)./w, y./w)
-      IP = JuLIP.MLIPs.combine(basis, c)
-      if Vref != nothing
-         IP = JuLIP.MLIPs.SumIP(Vref, IP)
-      end
+      #IP = JuLIP.MLIPs.combine(basis, c)
+      #if Vref != nothing
+      #   IP = JuLIP.MLIPs.SumIP(Vref, IP)
+      #end
       return IP, config_errors
    else 
       error("unknown assembly type")
