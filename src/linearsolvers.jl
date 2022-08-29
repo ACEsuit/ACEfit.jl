@@ -42,7 +42,7 @@ this solver computes
 ```
 Constructor
 ```julia
-ACEfit.QR(; λ = 0.0, P = nothing)
+ACEfit.QR(; lambda = 0.0, P = nothing)
 ``` 
 where 
 * `λ` : regularisation parameter 
