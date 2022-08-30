@@ -1,7 +1,6 @@
 
 
 using ACEfit
-using ACEfit: siterate, titerate 
 using Base.Threads
 
 ##
@@ -17,14 +16,14 @@ sf = (i, dat) -> (sleep(0.01); sf_data[i] = dat.config^2)
 ACEfit.siterate(sf, data)
 @test sf_data == f_data
 
-@info("Test titerate")
-@info("nthreads == $(nthreads())")
-if nthreads() == 1 
-   @info("If possible this should be tested with multiple threads...")
-end 
-tf_data = zeros(Int, length(data))
-tf = (i, dat) -> (sleep(0.01); tf_data[i] = dat.config^2)
-ACEfit.titerate(tf, data)
-@test tf_data == f_data
+#@info("Test titerate")
+#@info("nthreads == $(nthreads())")
+#if nthreads() == 1 
+#   @info("If possible this should be tested with multiple threads...")
+#end 
+#tf_data = zeros(Int, length(data))
+#tf = (i, dat) -> (sleep(0.01); tf_data[i] = dat.config^2)
+#ACEfit.titerate(tf, data)
+#@test tf_data == f_data
 
 ## 
