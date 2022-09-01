@@ -215,3 +215,13 @@ function set_weights!(data::AbstractVector{<: Dat},
    end
    return data 
 end
+
+# --------
+
+abstract type AbstractData end
+
+function countrows(d::AbstractData) end
+
+function designmatrix(d::AbstractData) end
+
+function targetvector(d::AbstractData) end

@@ -1,14 +1,5 @@
 using LinearAlgebra
 
-# TODO: will likely be useful to return to this more abstract approach eventually.
-#       requires defining get_basis and set_params
-#function llsq!(model, data::AbstractVector, Vref, par = :serial; solver = QR())
-#   basis = get_basis(model) # should return an ACEBasis 
-#   IP, errors = llsq(basis, data, Vref, par; solver = solver)
-#   set_params!(model, θ)
-#   return IP, errors
-#end
-
 function llsq(basis, data::AbstractVector, Vref, par = :serial; solver = QR())
    if par == :serial
       _iterate = siterate
@@ -18,6 +9,10 @@ function llsq(basis, data::AbstractVector, Vref, par = :serial; solver = QR())
    else 
       error("unknown assembly type")
    end
+end
+
+function llsq_new(data::AbstractVector, basis; solver = QR(), par = :serial)
+    assemble_llsq_new(data, basis)
 end
 
 function get_lsq_indices(data)
@@ -34,6 +29,22 @@ function get_lsq_indices(data)
    end
    ACEfit.siterate(count_Nobs, data)
    return firstidx, Nobs
+end
+
+function assemble_llsq_new(data, basis)
+
+   datarows = ones(Int,length(data))
+   datafirstrow = ones(Int,length(data))
+   for (i,d) in enumerate(data)
+      datarows[i] = countrows(d)
+      i<length(data) && (datafirstrow[i+1] = datafirstrow[i] + datarows[i])
+   end
+
+   @info "Creating design matrix with size ($(sum(datarows)), $(length(basis)))"
+   A = zeros(sum(datarows),length(basis))
+   Y = zeros(size(A,1))
+   W = zeros(size(A,1))
+
 end
 
 function assemble_llsq(basis, data, _iterate)
