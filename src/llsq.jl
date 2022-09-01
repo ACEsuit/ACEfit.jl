@@ -12,7 +12,9 @@ function llsq(basis, data::AbstractVector, Vref, par = :serial; solver = QR())
 end
 
 function llsq_new(data::AbstractVector, basis; solver = QR(), par = :serial)
-    assemble_llsq_new(data, basis)
+    A, Y, W = assemble_llsq_new(data, basis)
+    C = solve_llsq(solver, diagm(W)*A, diagm(W)*Y)
+    return diagm(W)*A, diagm(W)*Y, W, C
 end
 
 function get_lsq_indices(data)
@@ -54,6 +56,8 @@ function assemble_llsq_new(data, basis)
       Y[i1:i2] .= y
       W[i1:i2] .= w
    end
+
+   return A, Y, W
 
 end
 
