@@ -14,6 +14,7 @@ as keyword arguments to the solver's constructor.
 Valid solver types: "QR, LSQR, RRQR, SKLEARN_BRR, SKLEARN_ARD"
 """
 function create_solver(params::Dict)
+    params = copy(params)
     solver = uppercase(params["type"])
     delete!(params, "type")
     params = Dict(Symbol(k)=>v for (k,v) in pairs(params))
