@@ -3,8 +3,6 @@ module ACEfit
 # data management 
 include("data.jl")
 
-include("datautils.jl")
-
 # iteration utilities over training data 
 include("iterate.jl")
 
