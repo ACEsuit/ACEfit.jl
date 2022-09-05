@@ -220,7 +220,7 @@ end
 
 abstract type AbstractData end
 
-function countrows(d::AbstractData) end
+function countobservations(d::AbstractData) end
 
 function designmatrix(d::AbstractData) end
 

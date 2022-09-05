@@ -38,27 +38,29 @@ function assemble_llsq_new(data, basis)
    firstrow = ones(Int,length(data))
    rowcount = ones(Int,length(data))
    for (i,d) in enumerate(data)
-      rowcount[i] = countrows(d)
+      rowcount[i] = countobservations(d)
       i<length(data) && (firstrow[i+1] = firstrow[i] + rowcount[i])
    end
 
-   @info "Creating design matrix with size ($(sum(rowcount)), $(length(basis)))"
+   @info "Creating matrix with size ($(sum(rowcount)), $(length(basis)))"
    A = zeros(sum(rowcount),length(basis))
    Y = zeros(size(A,1))
    W = zeros(size(A,1))
 
    for (i,d) in enumerate(data)
-      i1, i2 = firstrow[i], firstrow[i]+rowcount[i]-1
-      a = designmatrix(d, basis)
-      y = targetvector(d)
-      w = weightvector(d)
-      A[i1:i2,:] .= a
-      Y[i1:i2] .= y
-      W[i1:i2] .= w
+      fill_llsq!(A, Y, W, d, basis; firstrow=firstrow[i])
    end
 
    return A, Y, W
 
+end
+
+function fill_llsq!(A, Y, W, dat, basis; firstrow=1)
+      i1 = firstrow
+      i2 = firstrow + countobservations(dat) - 1
+      A[i1:i2,:] .= designmatrix(dat, basis)
+      Y[i1:i2] .= targetvector(dat)
+      W[i1:i2] .= weightvector(dat)
 end
 
 function assemble_llsq(basis, data, _iterate)
