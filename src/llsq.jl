@@ -1,39 +1,12 @@
 using LinearAlgebra
 
-function llsq(basis, data::AbstractVector, Vref, par = :serial; solver = QR())
-   if par == :serial
-      _iterate = siterate
-      A, y, w = assemble_llsq(basis, data, _iterate)
-      c = solve_llsq(solver, A, y)
-      return A, y, w, c
-   else 
-      error("unknown assembly type")
-   end
-end
-
-function llsq_new(data::AbstractVector, basis; solver = QR())
-    A, Y, W = assemble_llsq_new(data, basis)
+function llsq(data::AbstractVector, basis; solver = QR())
+    A, Y, W = assemble_llsq(data, basis)
     C = solve_llsq(solver, Diagonal(W)*A, Diagonal(W)*Y)
     return A, Y, W, C
 end
 
-function get_lsq_indices(data)
-   # count the number of observations and assign indices in the lsq matrix
-   # we do this always in serial since it should take essentially no time
-   # (but what if the data lives distributed???)
-   Nobs = 0
-   firstidx = zeros(Int, length(data))
-   function count_Nobs(i, dat)
-      firstidx[i] = Nobs + 1
-      for o in ACEfit.observations(dat)
-         Nobs += length(ACEfit.vec_obs(o))
-      end
-   end
-   ACEfit.siterate(count_Nobs, data)
-   return firstidx, Nobs
-end
-
-function assemble_llsq_new(data, basis)
+function assemble_llsq(data, basis)
 
    firstrow = ones(Int,length(data))
    rowcount = ones(Int,length(data))
@@ -61,43 +34,4 @@ function fill_llsq!(A, Y, W, dat, basis; firstrow=1)
       A[i1:i2,:] .= designmatrix(dat, basis)
       Y[i1:i2] .= targetvector(dat)
       W[i1:i2] .= weightvector(dat)
-end
-
-function assemble_llsq(basis, data, _iterate)
-
-   _, num_obs = get_lsq_indices(data)
-
-   println("Creating design matrix with size (", num_obs, ", ", length(basis), ")")
-   A = zeros(num_obs, length(basis))
-   Y = zeros(num_obs)
-   W = zeros(num_obs)
-   
-   # inner assembly (this knows about A and Y)
-   idx = 1
-   function asm_lsq_inner(i0, dat)
-      for o in observations(dat)
-         # TODO: this isn't type stable; for very cheap models, this inner 
-         #       loop could be a bottleneck, can it be fixed? 
-         oB = basis_obs(typeof(o), basis, dat.config)
-         y = vec_obs(o)
-         w = get_weight(o)
-         # TODO: make this an input parameter eventually
-         if hasproperty(o, :E) || hasproperty(o, :V)
-            w = w ./ sqrt(length(dat.config))
-         end
-         inds = idx:idx+length(y)-1
-         Y[inds] .= w.*y[:]
-         W[inds] .= w.*ones(length(y))
-         for ib = 1:length(basis) 
-            ovec = vec_obs(oB[ib])
-            A[inds, ib] .= w.*ovec[:]
-         end
-         idx += length(y)
-      end
-      return nothing 
-   end
-
-   _iterate(asm_lsq_inner, data)
-
-   return A, Y, W
 end
