@@ -14,7 +14,7 @@ end
 function llsq_new(data::AbstractVector, basis; solver = QR())
     A, Y, W = assemble_llsq_new(data, basis)
     C = solve_llsq(solver, Diagonal(W)*A, Diagonal(W)*Y)
-    return Diagonal(W)*A, Diagonal(W)*Y, W, C
+    return A, Y, W, C
 end
 
 function get_lsq_indices(data)
