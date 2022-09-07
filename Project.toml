@@ -4,6 +4,7 @@ authors = ["William C Witt <witt.chuck@gmail.com>, Christoph Ortner <christophor
 version = "0.0.1"
 
 [deps]
+Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 ExtXYZ = "352459e4-ddd7-4360-8937-99dcb397b478"
 IterativeSolvers = "42fd0dbc-a981-5370-80f2-aaf504508153"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
