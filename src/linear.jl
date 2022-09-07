@@ -1,66 +1,41 @@
 using Distributed
 using LinearAlgebra
+using ProgressMeter
 using SharedArrays
 
-function linear_fit(data::AbstractVector, basis; solver=QR())
-    A, Y, W = linear_assemble(data, basis, :distributed)
+function linear_fit(data::AbstractVector, basis, solver=QR(), mode=:serial)
+    A, Y, W = linear_assemble(data, basis, mode)
     C = linear_solve(solver, Diagonal(W)*A, Diagonal(W)*Y)
     return A, Y, W, C
 end
 
 function linear_assemble(data, basis, mode=:serial)
-    if mode == :serial
-        return linear_assemble_serial(data, basis)
-    elseif mode == :distributed
-        return linear_assemble_distributed(data, basis)
-    else
-        @error "In linear_assemble, mode $mode is invalid."
-    end
-end
+   @info "Assembling linear problem."
+   row_start, row_count = row_info(data)
 
-function linear_assemble_serial(data, basis)
-   firstrow = ones(Int,length(data))
-   rowcount = ones(Int,length(data))
-   for (i,d) in enumerate(data)
-      rowcount[i] = countobservations(d)
-      i<length(data) && (firstrow[i+1] = firstrow[i] + rowcount[i])
-   end
-
-   @info "Creating matrix with size ($(sum(rowcount)), $(length(basis)))"
-   A = zeros(sum(rowcount),length(basis))
-   Y = zeros(size(A,1))
-   W = zeros(size(A,1))
-
-   for (i,d) in enumerate(data)
-      linear_fill!(A, Y, W, d, basis; firstrow=firstrow[i])
-   end
-
-   return A, Y, W
-end
-
-function linear_assemble_distributed(data, basis)
-   @info "Assembling least squares problem in distributed mode."
-   firstrow = ones(Int,length(data))
-   rowcount = ones(Int,length(data))
-   for (i,d) in enumerate(data)
-      rowcount[i] = countobservations(d)
-      i<length(data) && (firstrow[i+1] = firstrow[i] + rowcount[i])
-   end
-
-   @info "Creating matrix with size ($(sum(rowcount)), $(length(basis)))"
-   A = SharedArray(zeros(sum(rowcount),length(basis)))
+   @info "  - Creating feature matrix with size ($(sum(row_count)), $(length(basis)))."
+   A = SharedArray(zeros(sum(row_count),length(basis)))
    Y = SharedArray(zeros(size(A,1)))
    W = SharedArray(zeros(size(A,1)))
 
-   f = x -> linear_fill!(A, Y, W, x[1], basis; firstrow=x[2])
-   pmap(f, zip(data,firstrow))
+   f = i -> linear_fill!(A, Y, W, data[i], basis; row_start=row_start[i])
+   if mode == :serial
+       @info "  - Beginning assembly in serial mode."
+       @showprogress map(f, 1:length(data))
+   elseif mode == :distributed
+       @info "  - Beginning assembly in distributed mode with $(nworkers()) workers."
+       @showprogress pmap(f, 1:length(data))
+   else
+       @error "In linear_assemble, mode $mode is invalid."
+   end
 
+   @info "  - Assembly completed."
    return Array(A), Array(Y), Array(W)
 end
 
-function linear_fill!(A, Y, W, dat, basis; firstrow=1)
-      i1 = firstrow
-      i2 = firstrow + countobservations(dat) - 1
+function linear_fill!(A, Y, W, dat, basis; row_start=1)
+      i1 = row_start
+      i2 = row_start + countobservations(dat) - 1
       A[i1:i2,:] .= designmatrix(dat, basis)
       Y[i1:i2] .= targetvector(dat)
       W[i1:i2] .= weightvector(dat)
