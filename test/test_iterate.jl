@@ -5,16 +5,16 @@ using Base.Threads
 
 ##
 
-@info("Very basic iteration test.")
-
-data = [ Dat(n) for n = 1:100 ]
-f_data = [dat.config^2 for dat in data] 
-
-@info("Test siterate")
-sf_data = zeros(Int, length(data))
-sf = (i, dat) -> (sleep(0.01); sf_data[i] = dat.config^2)
-ACEfit.siterate(sf, data)
-@test sf_data == f_data
+#@info("Very basic iteration test.")
+#
+#data = [ Dat(n) for n = 1:100 ]
+#f_data = [dat.config^2 for dat in data] 
+#
+#@info("Test siterate")
+#sf_data = zeros(Int, length(data))
+#sf = (i, dat) -> (sleep(0.01); sf_data[i] = dat.config^2)
+#ACEfit.siterate(sf, data)
+#@test sf_data == f_data
 
 #@info("Test titerate")
 #@info("nthreads == $(nthreads())")
