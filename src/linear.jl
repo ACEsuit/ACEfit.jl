@@ -2,23 +2,23 @@ using Distributed
 using LinearAlgebra
 using SharedArrays
 
-function llsq(data::AbstractVector, basis; solver=QR())
-    A, Y, W = llsq_assemble(data, basis, :distributed)
-    C = llsq_solve(solver, Diagonal(W)*A, Diagonal(W)*Y)
+function linear_fit(data::AbstractVector, basis; solver=QR())
+    A, Y, W = linear_assemble(data, basis, :distributed)
+    C = linear_solve(solver, Diagonal(W)*A, Diagonal(W)*Y)
     return A, Y, W, C
 end
 
-function llsq_assemble(data, basis, mode=:serial)
+function linear_assemble(data, basis, mode=:serial)
     if mode == :serial
-        return llsq_assemble_serial(data, basis)
+        return linear_assemble_serial(data, basis)
     elseif mode == :distributed
-        return llsq_assemble_distributed(data, basis)
+        return linear_assemble_distributed(data, basis)
     else
-        @error "In llsq_assemble, mode $mode is invalid."
+        @error "In linear_assemble, mode $mode is invalid."
     end
 end
 
-function llsq_assemble_serial(data, basis)
+function linear_assemble_serial(data, basis)
    firstrow = ones(Int,length(data))
    rowcount = ones(Int,length(data))
    for (i,d) in enumerate(data)
@@ -32,13 +32,13 @@ function llsq_assemble_serial(data, basis)
    W = zeros(size(A,1))
 
    for (i,d) in enumerate(data)
-      llsq_fill!(A, Y, W, d, basis; firstrow=firstrow[i])
+      linear_fill!(A, Y, W, d, basis; firstrow=firstrow[i])
    end
 
    return A, Y, W
 end
 
-function llsq_assemble_distributed(data, basis)
+function linear_assemble_distributed(data, basis)
    @info "Assembling least squares problem in distributed mode."
    firstrow = ones(Int,length(data))
    rowcount = ones(Int,length(data))
@@ -52,13 +52,13 @@ function llsq_assemble_distributed(data, basis)
    Y = SharedArray(zeros(size(A,1)))
    W = SharedArray(zeros(size(A,1)))
 
-   f = x -> llsq_fill!(A, Y, W, x[1], basis; firstrow=x[2])
+   f = x -> linear_fill!(A, Y, W, x[1], basis; firstrow=x[2])
    pmap(f, zip(data,firstrow))
 
    return Array(A), Array(Y), Array(W)
 end
 
-function llsq_fill!(A, Y, W, dat, basis; firstrow=1)
+function linear_fill!(A, Y, W, dat, basis; firstrow=1)
       i1 = firstrow
       i2 = firstrow + countobservations(dat) - 1
       A[i1:i2,:] .= designmatrix(dat, basis)

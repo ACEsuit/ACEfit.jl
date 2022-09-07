@@ -12,7 +12,7 @@ include("iterate.jl")
 # should this stay in ACEflux? 
 
 # linear least squares assembly for linear models
-include("llsq.jl")
+include("linear.jl")
 
 # bayesian linear solvers
 include("bayesianlinear.jl")

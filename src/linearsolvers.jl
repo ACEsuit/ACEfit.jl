@@ -56,7 +56,7 @@ end
 
 QR(; lambda = 0.0, P = I) = QR(lambda, P)
          
-function llsq_solve(solver::QR, A, y)
+function linear_solve(solver::QR, A, y)
    if solver.lambda == 0 
       AP = A 
       yP = y 
@@ -98,7 +98,7 @@ end
 
 RRQR(; rtol = 1e-15, P = I) = RRQR(rtol, P) 
 
-function llsq_solve(solver::RRQR, A, y)
+function linear_solve(solver::RRQR, A, y)
    AP = A / solver.P 
    θP = pqrfact(AP, rtol = solver.rtol) \ y 
    return solver.P \ θP
@@ -118,7 +118,7 @@ end
 
 LSQR(; damp=5e-3, atol=1e-6, conlim=1e8, maxiter=100000, verbose=false) = LSQR(damp, atol, conlim, maxiter, verbose, I)
 
-function llsq_solve(solver::LSQR, A, y)
+function linear_solve(solver::LSQR, A, y)
    println("damp  ", solver.damp)
    println("atol  ", solver.atol)
    println("maxiter  ", solver.maxiter)
@@ -144,7 +144,7 @@ struct SKLEARN_BRR
 end
 SKLEARN_BRR(; tol=1e-3, n_iter=300) = SKLEARN_BRR(tol, n_iter)
 
-function llsq_solve(solver::SKLEARN_BRR, A, y)
+function linear_solve(solver::SKLEARN_BRR, A, y)
    BRR = pyimport("sklearn.linear_model")["BayesianRidge"]
    clf = BRR(n_iter=solver.n_iter, tol=solver.tol, fit_intercept=true, normalize=true, compute_score=true)
    clf.fit(A, y)
@@ -167,7 +167,7 @@ struct SKLEARN_ARD
 end
 SKLEARN_ARD(; n_iter=300, tol=1e-3, threshold_lambda=10000) = SKLEARN_ARD(n_iter, tol, threshold_lambda)
 
-function llsq_solve(solver::SKLEARN_ARD, A, y)
+function linear_solve(solver::SKLEARN_ARD, A, y)
    ARD = pyimport("sklearn.linear_model")["ARDRegression"]
    clf = ARD(n_iter=solver.n_iter, threshold_lambda=solver.threshold_lambda, tol=solver.tol,
              fit_intercept=true, normalize=true, compute_score=true)
@@ -187,7 +187,7 @@ Bayesian Linear Regression
 struct BL
 end
 
-function llsq_solve(solver::BL, A, y)
+function linear_solve(solver::BL, A, y)
    c, _, _, _ = bayesian_fit(y, A; verbose=false)
    return c
 end
@@ -198,7 +198,7 @@ Bayesian ARD
 struct BARD
 end
 
-function llsq_solve(solver::BARD, A, y)
+function linear_solve(solver::BARD, A, y)
    c, _, _, _, _ = ard_fit(y, A; verbose=false)
    return c
 end
@@ -211,7 +211,7 @@ struct BayesianLinearRegressionSVD
 end
 BayesianLinearRegressionSVD(; verbose=false) = BayesianLinearRegressionSVD(verbose)
 
-function llsq_solve(solver::BayesianLinearRegressionSVD, A, y)
+function linear_solve(solver::BayesianLinearRegressionSVD, A, y)
    c, var_0, var_e = bayesian_linear_regression_svd(A, y; verbose=solver.verbose)
    return c
 end
