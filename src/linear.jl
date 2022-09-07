@@ -35,8 +35,8 @@ end
 
 function linear_fill!(A, Y, W, dat, basis; row_start=1)
       i1 = row_start
-      i2 = row_start + countobservations(dat) - 1
-      A[i1:i2,:] .= designmatrix(dat, basis)
-      Y[i1:i2] .= targetvector(dat)
-      W[i1:i2] .= weightvector(dat)
+      i2 = row_start + count_observations(dat) - 1
+      A[i1:i2,:] .= feature_matrix(dat, basis)
+      Y[i1:i2] .= target_vector(dat)
+      W[i1:i2] .= weight_vector(dat)
 end
