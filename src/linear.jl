@@ -5,6 +5,7 @@ using SharedArrays
 
 function linear_fit(data::AbstractVector, basis, solver=QR(), mode=:serial)
     A, Y, W = linear_assemble(data, basis, mode)
+    GC.gc()
     C = linear_solve(solver, Diagonal(W)*A, Diagonal(W)*Y)
     return A, Y, W, C
 end
@@ -39,4 +40,6 @@ function linear_fill!(A, Y, W, dat, basis; row_start=1)
    A[i1:i2,:] .= feature_matrix(dat, basis)
    Y[i1:i2] .= target_vector(dat)
    W[i1:i2] .= weight_vector(dat)
+   GC.gc()  # not sure if this is necessary?
+   return nothing
 end
