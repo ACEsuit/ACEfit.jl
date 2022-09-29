@@ -3,10 +3,13 @@ using LinearAlgebra
 using ProgressMeter
 using SharedArrays
 
-function linear_fit(data::AbstractVector, basis, solver=QR(), mode=:serial)
+function linear_fit(data::AbstractVector, basis, solver=QR(), mode=:serial, P=nothing)
     A, Y, W = linear_assemble(data, basis, mode)
+    !isnothing(P) && rmul!(A, pinv(P))
     GC.gc()
     C = linear_solve(solver, Diagonal(W)*A, Diagonal(W)*Y)
+    !isnothing(P) && rmul!(A, P)
+    !isnothing(P) && (C = pinv(P)*C)
     return A, Y, W, C
 end
 
