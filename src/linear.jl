@@ -5,11 +5,15 @@ using SharedArrays
 
 function linear_fit(data::AbstractVector, basis, solver=QR(), mode=:serial, P=nothing)
     A, Y, W = linear_assemble(data, basis, mode)
-    !isnothing(P) && rmul!(A, pinv(P))
+    lmul!(Diagonal(W),A)
+    Y = W.*Y
+    !isnothing(P) && (A = A*pinv(P))
     GC.gc()
-    C = linear_solve(solver, Diagonal(W)*A, Diagonal(W)*Y)
-    !isnothing(P) && rmul!(A, P)
+    C = linear_solve(solver, A, Y)
+    !isnothing(P) && (A = A*P)
     !isnothing(P) && (C = pinv(P)*C)
+    lmul!(inv(Diagonal(W)),A)
+    Y = (1.0./W).*Y
     return A, Y, W, C
 end
 
