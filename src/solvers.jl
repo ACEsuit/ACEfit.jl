@@ -122,12 +122,6 @@ function linear_solve(solver::LSQR, A, y)
    println("damp  ", solver.damp)
    println("atol  ", solver.atol)
    println("maxiter  ", solver.maxiter)
-   # preconditioning
-   #if !(solver.P == I)
-   #   @info("LSQR: Using preconditioning")
-   #   D_inv = pinv(P)
-   #   mul!(A,A,D_inv)
-   #end
    c, ch = lsqr(A, y; damp=solver.damp, atol=solver.atol, conlim=solver.conlim,
                       maxiter=solver.maxiter, verbose=solver.verbose, log=true)
    println(ch)
