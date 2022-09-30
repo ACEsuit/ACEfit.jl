@@ -15,8 +15,7 @@ Valid solver types: "QR, LSQR, RRQR, SKLEARN_BRR, SKLEARN_ARD"
 """
 function create_solver(params::Dict)
     params = copy(params)
-    solver = uppercase(params["type"])
-    delete!(params, "type")
+    solver = uppercase(pop!(params, "type"))
     params = Dict(Symbol(k)=>v for (k,v) in pairs(params))
     if solver == "QR"
         return QR(; params...)
