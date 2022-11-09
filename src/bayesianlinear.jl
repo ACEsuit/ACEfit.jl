@@ -353,10 +353,16 @@ function bayesian_linear_regression_svd(
     X::Matrix{<:AbstractFloat},
     Y::Vector{<:AbstractFloat};
     variance_floor::AbstractFloat=1e-8,
-    ensemble_size::Int=0,
-    verbose::Bool=false
+    committee_size::Int=0,
+    verbose::Bool=false,
+    ret_covar=false
 )
-    U, S, V = svd(X; full=true, alg=LinearAlgebra.QRIteration())
+    @info "Entering bayesian_linear_regression_svd"
+    @info "Computing SVD of $(size(X)) matrix"
+    flush(stdout); flush(stderr)
+    elapsed = @elapsed U, S, V = svd(X; full=true, alg=LinearAlgebra.QRIteration())
+    @info "SVD completed after $(elapsed/60) minutes"
+
     UT_Y = transpose(U) * Y
 
     function log_marginal_likelihood!(lml, grad_lml, var_0, var_e)
@@ -381,6 +387,7 @@ function bayesian_linear_regression_svd(
     end
 
     function fg!(f, g, x)
+        flush(stdout); flush(stderr)
         var_0, var_e = variance_floor .+ x.^2
         f = log_marginal_likelihood!(f, g, var_0, var_e)
         if f != nothing
@@ -392,27 +399,38 @@ function bayesian_linear_regression_svd(
         return f
     end
 
+    @info "Beginning to maximize marginal likelihood"
+    flush(stdout); flush(stderr)
     res = optimize(Optim.only_fg!(fg!),
                    ones(2),
                    Optim.LBFGS(),
                    Optim.Options(x_tol=1e-6, g_tol=0.0, show_trace=verbose))
+    @info "Optimization complete" "Results"=res
     lml = -Optim.minimum(res)
     var_0, var_e = variance_floor .+ Optim.minimizer(res).^2
 
     UT_Y[1:length(S)] .*= var_0.*S ./ (var_0.*S.*S .+ var_e)
     c = V * UT_Y[1:length(S)]
 
-    if ensemble_size==0
-        return c, var_0, var_e
-    else
-        ensemble = zeros(size(X,2), ensemble_size)
-        sqrt_covar = 1.0 ./ sqrt.(S.*S/var_e .+ 1.0/var_0)
-        for i = 1:ensemble_size
-            ensemble[:,i] .= c + V*Diagonal(sqrt_covar)*transpose(V)*randn(size(X,2))
+    res = Dict{String,Any}(
+        "c" => c,
+        "lml" => lml,
+        "var_0" => var_0,
+        "var_e" => var_e,
+        "committee" => nothing,
+        "covar" => nothing)
+
+    if committee_size > 0
+        committee = zeros(size(X,2), committee_size)
+        covar = 1.0 ./ (S.*S/var_e .+ 1.0/var_0)
+        for i = 1:committee_size
+            committee[:,i] .= c + V*Diagonal(sqrt.(covar))*transpose(V)*randn(size(X,2))
         end
-        return c, var_0, var_e, ensemble
+        res["committee"] = committee
+        ret_covar && (res["covar"] = V*Diagonal(covar)*transpose(V))
     end
 
+    return res
 end
 
 end
