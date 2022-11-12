@@ -4,12 +4,17 @@ using ProgressMeter
 using SharedArrays
 
 function linear_fit(data::AbstractVector, basis, solver=QR(), mode=:serial, P=nothing)
+    @info "Entering linear_assemble"
     A, Y, W = linear_assemble(data, basis, mode)
+    @info "After linear_assemble"
+    flush(stdout); flush(stderr)
     lmul!(Diagonal(W),A)
     Y = W.*Y
     !isnothing(P) && (A = A*pinv(P))
     GC.gc()
+    @info "Entering linear_solve"
     C = linear_solve(solver, A, Y)
+    @info "After linear_solve"
     !isnothing(P) && (A = A*P)
     !isnothing(P) && (C = pinv(P)*C)
     lmul!(inv(Diagonal(W)),A)
@@ -38,6 +43,7 @@ function linear_assemble(data, basis, mode=:serial)
    end
 
    @info "  - Assembly completed."
+   flush(stdout); flush(stderr)
    return Array(A), Array(Y), Array(W)
 end
 

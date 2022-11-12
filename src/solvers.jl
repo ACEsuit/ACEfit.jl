@@ -138,6 +138,7 @@ end
 SKLEARN_BRR(; tol=1e-3, n_iter=300) = SKLEARN_BRR(tol, n_iter)
 
 function linear_solve(solver::SKLEARN_BRR, A, y)
+   @info "Entering SKLEARN_BRR"
    BRR = pyimport("sklearn.linear_model")["BayesianRidge"]
    clf = BRR(n_iter=solver.n_iter, tol=solver.tol, fit_intercept=true, normalize=true, compute_score=true)
    clf.fit(A, y)
