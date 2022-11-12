@@ -206,6 +206,6 @@ end
 BayesianLinearRegressionSVD(; verbose=false) = BayesianLinearRegressionSVD(verbose)
 
 function linear_solve(solver::BayesianLinearRegressionSVD, A, y)
-   c, var_0, var_e = bayesian_linear_regression_svd(A, y; verbose=solver.verbose)
-   return c
+   res = bayesian_linear_regression_svd(A, y; verbose=solver.verbose)
+   return res["c"]
 end
