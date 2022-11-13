@@ -13,13 +13,19 @@ function linear_fit(data::AbstractVector, basis, solver=QR(), mode=:serial, P=no
     !isnothing(P) && (A = A*pinv(P))
     GC.gc()
     @info "Entering linear_solve"
-    C = linear_solve(solver, A, Y)
+    results = linear_solve(solver, A, Y)
+    C = results["C"]
     @info "After linear_solve"
-    !isnothing(P) && (A = A*P)
-    !isnothing(P) && (C = pinv(P)*C)
+    if !isnothing(P)
+        A = A*P
+        C = pinv(P)*C
+        # TODO: deapply preconditioner to committee
+    end
     lmul!(inv(Diagonal(W)),A)
     Y = (1.0./W).*Y
-    return A, Y, W, C
+    fit = Dict{String,Any}("C" => C)
+    haskey(results, "committee") && (fit["committee"] = committee)
+    return fit
 end
 
 function linear_assemble(data, basis, mode=:serial)

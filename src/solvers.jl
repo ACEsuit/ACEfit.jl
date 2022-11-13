@@ -63,7 +63,7 @@ function linear_solve(solver::QR, A, y)
       AP = [A; solver.lambda * solver.P]
       yP = [y; zeros(eltype(y), size(A, 2))]
    end 
-   return qr(AP) \ yP
+   return Dict{String,Any}("C" => qr(AP) \ yP)
 end
 
 @doc raw"""
@@ -100,7 +100,7 @@ RRQR(; rtol = 1e-15, P = I) = RRQR(rtol, P)
 function linear_solve(solver::RRQR, A, y)
    AP = A / solver.P 
    θP = pqrfact(AP, rtol = solver.rtol) \ y 
-   return solver.P \ θP
+   return Dict{String,Any}("C" => solver.P \ θP)
 end
 
 @doc raw"""
@@ -125,7 +125,7 @@ function linear_solve(solver::LSQR, A, y)
                       maxiter=solver.maxiter, verbose=solver.verbose, log=true)
    println(ch)
    println("relative RMS error  ", norm(A*c - y) / norm(y))
-   return c
+   return Dict{String,Any}("C" => c)
 end
 
 @doc raw"""
@@ -148,7 +148,7 @@ function linear_solve(solver::SKLEARN_BRR, A, y)
       @warn "\nBRR did not converge to tol=$(solver.tol) after n_iter=$(solver.n_iter) iterations.\n"
    end
    c = clf.coef_
-   return c
+   return Dict{String,Any}("C" => c)
 end
 
 @doc raw"""
@@ -172,7 +172,7 @@ function linear_solve(solver::SKLEARN_ARD, A, y)
       @warn "\n\nARD did not converge to tol=$(solver.tol) after n_iter=$(solver.n_iter) iterations.\n\n"
    end
    c = clf.coef_
-   return c
+   return Dict{String,Any}("C" => c)
 end
 
 @doc raw"""
@@ -183,7 +183,7 @@ end
 
 function linear_solve(solver::BL, A, y)
    c, _, _, _ = bayesian_fit(y, A; verbose=false)
-   return c
+   return Dict{String,Any}("C" => c)
 end
 
 @doc raw"""
@@ -194,7 +194,7 @@ end
 
 function linear_solve(solver::BARD, A, y)
    c, _, _, _, _ = ard_fit(y, A; verbose=false)
-   return c
+   return Dict{String,Any}("C" => c)
 end
 
 @doc raw"""
@@ -202,10 +202,14 @@ Bayesian Linear Regression SVD
 """
 struct BayesianLinearRegressionSVD
     verbose::Bool
+    committee_size
 end
-BayesianLinearRegressionSVD(; verbose=false) = BayesianLinearRegressionSVD(verbose)
+BayesianLinearRegressionSVD(; verbose=false, committee_size=0) =
+    BayesianLinearRegressionSVD(verbose, committee_size)
 
 function linear_solve(solver::BayesianLinearRegressionSVD, A, y)
-   res = bayesian_linear_regression_svd(A, y; verbose=solver.verbose)
-   return res["c"]
+   blr = bayesian_linear_regression_svd(A, y; verbose=solver.verbose)
+   results = Dict{String,Any}("C" => results["c"])
+   haskey(blr, "committee") && (results["committee"] = blr["committee"])
+   return results
 end
