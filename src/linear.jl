@@ -24,7 +24,7 @@ function linear_fit(data::AbstractVector, basis, solver=QR(), mode=:serial, P=no
     lmul!(inv(Diagonal(W)),A)
     Y = (1.0./W).*Y
     fit = Dict{String,Any}("C" => C)
-    haskey(results, "committee") && (fit["committee"] = committee)
+    haskey(results, "committee") && (fit["committee"] = results["committee"])
     return fit
 end
 
