@@ -416,9 +416,7 @@ function bayesian_linear_regression_svd(
         "c" => c,
         "lml" => lml,
         "var_0" => var_0,
-        "var_e" => var_e,
-        "committee" => nothing,
-        "covar" => nothing)
+        "var_e" => var_e)
 
     if committee_size > 0
         committee = zeros(size(X,2), committee_size)
