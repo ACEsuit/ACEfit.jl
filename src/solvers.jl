@@ -208,7 +208,7 @@ BayesianLinearRegressionSVD(; verbose=false, committee_size=0) =
     BayesianLinearRegressionSVD(verbose, committee_size)
 
 function linear_solve(solver::BayesianLinearRegressionSVD, A, y)
-   blr = bayesian_linear_regression_svd(A, y; verbose=solver.verbose)
+   blr = bayesian_linear_regression_svd(A, y; verbose=solver.verbose, committee_size=solver.committee_size)
    results = Dict{String,Any}("C" => blr["c"])
    haskey(blr, "committee") && (results["committee"] = blr["committee"])
    return results
