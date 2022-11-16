@@ -364,9 +364,9 @@ function bayesian_linear_regression_svd(
     ret_covar=false
 )
     @info "Entering bayesian_linear_regression_svd"
-    @info "Computing SVD of $(size(X)) matrix"
+    @info "Computing SVD of $(size(X)) matrix" BLAS.get_num_threads() BLAS.get_config()
     flush(stdout); flush(stderr)
-    elapsed = @elapsed U, S, V = svd(X; full=true, alg=LinearAlgebra.QRIteration())
+    elapsed = @elapsed U, S, V = svd!(X; full=true, alg=LinearAlgebra.QRIteration())
     @info "SVD completed after $(elapsed/60) minutes"
 
     UT_Y = transpose(U) * Y
