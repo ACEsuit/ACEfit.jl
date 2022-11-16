@@ -73,6 +73,12 @@ $$
     - \frac{1}{2} \ln \left| \boldsymbol{\Sigma}_0 \right|
     - \frac{N}{2} \ln (\sigma_\epsilon^2)
     - \frac{N}{2} \ln (2\pi) \\
+&= -\frac{1}{2} \sigma_\epsilon^{-2}  ||  \mathbf{y} - \boldsymbol{\Phi} \boldsymbol{\mu}_c ||^2
+    - \frac{1}{2} \boldsymbol{\mu}_c^T \boldsymbol{\Sigma}_0^{-1} \boldsymbol{\mu}_c
+    + \frac{1}{2} \ln \left| \boldsymbol{\Sigma}_c \right|
+    - \frac{1}{2} \ln \left| \boldsymbol{\Sigma}_0 \right|
+    - \frac{N}{2} \ln (\sigma_\epsilon^2)
+    - \frac{N}{2} \ln (2\pi) \\
 \end{aligned} .
 $$
 The relevant derivatives with respect to the hyperparameters are
