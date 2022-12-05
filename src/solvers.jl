@@ -115,9 +115,10 @@ struct LSQR
    P
 end
 
-LSQR(; damp=5e-3, atol=1e-6, conlim=1e8, maxiter=100000, verbose=false) = LSQR(damp, atol, conlim, maxiter, verbose, I)
+LSQR(; damp=5e-3, atol=1e-6, conlim=1e8, maxiter=100000, verbose=false, P=nothing) = LSQR(damp, atol, conlim, maxiter, verbose, P)
 
 function linear_solve(solver::LSQR, A, y)
+   @warn "Need to apply preconditioner in LSQR."
    println("damp  ", solver.damp)
    println("atol  ", solver.atol)
    println("maxiter  ", solver.maxiter)
