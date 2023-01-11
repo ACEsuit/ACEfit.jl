@@ -40,7 +40,7 @@ jobs:
         run: |
           pip install scikit-learn
       - name: Install dependencies
-        run: julia --project=docs/ -e 'using Pkg; Pkg.Registry.add(RegistrySpec(url = "https://github.com/JuliaMolSim/MolSim"));'
+        run: julia --project=docs/ -e 'using Pkg; Pkg.Registry.add(RegistrySpec(url = "https://github.com/ACEsuit/ACEregistry"));'
       - uses: actions/cache@v1
         env:
           cache-name: cache-artifacts
@@ -62,7 +62,7 @@ jobs:
         with:
           version: '1'
       - name: Install dependencies
-        run: julia --project=docs/ -e 'using Pkg; Pkg.Registry.add(RegistrySpec(url = "https://github.com/JuliaMolSim/MolSim"));'
+        run: julia --project=docs/ -e 'using Pkg; Pkg.Registry.add(RegistrySpec(url = "https://github.com/ACEsuit/ACEregistry"));'
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-docdeploy@v1
         env:
