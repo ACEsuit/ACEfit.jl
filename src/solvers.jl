@@ -141,7 +141,7 @@ SKLEARN_BRR(; tol=1e-3, n_iter=300) = SKLEARN_BRR(tol, n_iter)
 function linear_solve(solver::SKLEARN_BRR, A, y)
    @info "Entering SKLEARN_BRR"
    BRR = pyimport("sklearn.linear_model")["BayesianRidge"]
-   clf = BRR(n_iter=solver.n_iter, tol=solver.tol, fit_intercept=true, normalize=true, compute_score=true)
+   clf = BRR(n_iter=solver.n_iter, tol=solver.tol, fit_intercept=true, compute_score=true)
    clf.fit(A, y)
    if length(clf.scores_) < solver.n_iter
       @info "BRR converged to tol=$(solver.tol) after $(length(clf.scores_)) iterations."
@@ -165,7 +165,7 @@ SKLEARN_ARD(; n_iter=300, tol=1e-3, threshold_lambda=10000) = SKLEARN_ARD(n_iter
 function linear_solve(solver::SKLEARN_ARD, A, y)
    ARD = pyimport("sklearn.linear_model")["ARDRegression"]
    clf = ARD(n_iter=solver.n_iter, threshold_lambda=solver.threshold_lambda, tol=solver.tol,
-             fit_intercept=true, normalize=true, compute_score=true)
+             fit_intercept=true, compute_score=true)
    clf.fit(A, y)
    if length(clf.scores_) < solver.n_iter
       @info "ARD converged to tol=$(solver.tol) after $(length(clf.scores_)) iterations."
