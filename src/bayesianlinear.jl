@@ -297,7 +297,7 @@ function bayesian_fit(
     res = optimize(Optim.only_fg!(fg!),
                    ones(2),
                    Optim.LBFGS(),
-                   Optim.Options(x_tol=1e-4, g_tol=0.0, show_trace=verbose))
+                   Optim.Options(x_tol=1e-8, g_tol=0.0, show_trace=verbose))
     verbose && println(res)
 
     lml = -Optim.minimum(res)
@@ -338,7 +338,7 @@ function ard_fit(
     res = optimize(Optim.only_fg!(fg!),
                    ones(size(X,2)+1),
                    Optim.LBFGS(),
-                   Optim.Options(x_tol=1e-6, g_tol=0.0, show_trace=verbose))
+                   Optim.Options(x_tol=1e-8, g_tol=0.0, show_trace=verbose))
     verbose && println(res)
 
     lml = -Optim.minimum(res)
@@ -411,7 +411,7 @@ function bayesian_linear_regression_svd(
     res = optimize(Optim.only_fg!(fg!),
                    ones(2),
                    Optim.LBFGS(),
-                   Optim.Options(x_tol=1e-6, g_tol=0.0, show_trace=verbose))
+                   Optim.Options(x_tol=1e-8, g_tol=0.0, show_trace=verbose))
     @info "Optimization complete" "Results"=res
     lml = -Optim.minimum(res)
     var_0, var_e = variance_floor .+ Optim.minimizer(res).^2
