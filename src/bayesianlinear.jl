@@ -366,6 +366,7 @@ function bayesian_linear_regression_svd(
     @info "Entering bayesian_linear_regression_svd"
     @info "Computing SVD of $(size(X)) matrix" BLAS.get_num_threads() BLAS.get_config()
     flush(stdout); flush(stderr)
+    #elapsed = @elapsed U, S, V = svd!(X; full=true, alg=LinearAlgebra.QRIteration())
     elapsed = @elapsed U, S, V = svd!(X; full=false, alg=LinearAlgebra.QRIteration())
     @info "SVD completed after $(elapsed/60) minutes"
 
@@ -381,12 +382,10 @@ function bayesian_linear_regression_svd(
             dlml_d0 += 0.5*UT_Y[i]*UT_Y[i]*S[i]*S[i]/(t*t) - 0.5*S[i]*S[i]/t
             dlml_de += 0.5*UT_Y[i]*UT_Y[i]/(t*t) - 0.5/t
         end
-        lml += -0.5/var_e*(norm(Y)-norm(UT_Y))  # only appropriate for thin svd
-        dlml_de += 0.5/(var_e*var_e)*(norm(Y)-norm(UT_Y))
-        #for i in (length(S)+1):size(X,1)
-        #    lml += -0.5*UT_Y[i]*UT_Y[i]/var_e
-        #    dlml_de += 0.5*UT_Y[i]*UT_Y[i]/(var_e*var_e)
-        #end
+        #lml += -0.5*dot(UT_Y[length(S)+1:end],UT_Y[length(S)+1:end])/var_e  # for full svd
+        #dlml_de += 0.5*dot(UT_Y[length(S)+1:end],UT_Y[length(S)+1:end])/(var_e*var_e)
+        lml += -0.5/var_e*(dot(Y,Y)-dot(UT_Y,UT_Y))                         # for thin svd
+        dlml_de += 0.5/(var_e*var_e)*(dot(Y,Y)-dot(UT_Y,UT_Y))
         lml += -0.5*(size(X,1)-length(S))*log(var_e)
         dlml_de += -0.5*(size(X,1)-length(S))/var_e
         lml += -0.5*size(X,1)*log(2*pi)
