@@ -273,7 +273,7 @@ function bayesian_fit(
     variance_floor::AbstractFloat=1e-8,
     verbose::Bool=false,
 )
-    if size(X,1) > size(X,2)
+    if size(X,1) >= size(X,2)
         XTX = X'*X  # advantageous to precompute for overdetermined case
     end
 
