@@ -3,9 +3,9 @@ using LinearAlgebra
 using ProgressMeter
 using SharedArrays
 
-function linear_fit(data::AbstractVector, basis, solver=QR(), mode=:serial, P=nothing)
+function linear_fit(data::AbstractVector, basis, solver=QR(); P=nothing)
     @info "Entering linear_assemble"
-    A, Y, W = linear_assemble(data, basis, mode)
+    A, Y, W = linear_assemble(data, basis)
     @info "After linear_assemble"
     flush(stdout); flush(stderr)
     lmul!(Diagonal(W),A)
@@ -28,7 +28,8 @@ function linear_fit(data::AbstractVector, basis, solver=QR(), mode=:serial, P=no
     return fit
 end
 
-function linear_assemble(data, basis, mode=:serial)
+function linear_assemble(data, basis)
+
    @info "Assembling linear problem."
    row_start, row_count = row_info(data)
 
@@ -38,14 +39,12 @@ function linear_assemble(data, basis, mode=:serial)
    W = SharedArray(zeros(size(A,1)))
 
    f = i -> linear_fill!(A, Y, W, data[i], basis; row_start=row_start[i])
-   if mode == :serial
+   if nprocs() == 1
        @info "  - Beginning assembly in serial mode."
        @showprogress map(f, 1:length(data))
-   elseif mode == :distributed
-       @info "  - Beginning assembly in distributed mode with $(nworkers()) workers."
-       @showprogress pmap(f, 1:length(data))
    else
-       @error "In linear_assemble, mode $mode is invalid."
+       @info "  - Beginning assembly in distributed mode with $(nprocs()) processes."
+       @showprogress pmap(f, 1:length(data))
    end
 
    @info "  - Assembly completed."
