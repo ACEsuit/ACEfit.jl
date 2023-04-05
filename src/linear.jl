@@ -52,8 +52,6 @@ function linear_assemble(data, basis)
    (nprocs() > 1) && sendto(workers(), basis=basis)
    @showprogress pmap(packets) do packet
       rows, data = packet.rows, packet.data
-      println(rows)
-      println(size(feature_matrix(data, basis)))
       A[rows,:] .= feature_matrix(data, basis)
       Y[rows] .= target_vector(data)
       W[rows] .= weight_vector(data)
