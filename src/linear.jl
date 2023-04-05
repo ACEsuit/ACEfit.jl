@@ -49,7 +49,7 @@ function linear_assemble(data, basis)
    A = SharedArray(zeros(rows[end][end],length(basis)))
    Y = SharedArray(zeros(size(A,1)))
    W = SharedArray(zeros(size(A,1)))
-   @info "  - Beginning assembly in distributed mode with $(nprocs()) processes."
+   @info "  - Beginning assembly with processor count:  $(nprocs())."
    (nprocs() > 1) && sendto(workers(), basis=basis)
    @showprogress pmap(packets) do packet
       rows, data = packet.rows, packet.data
