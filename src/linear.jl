@@ -28,36 +28,37 @@ function linear_fit(data::AbstractVector, basis, solver=QR(); P=nothing)
     return fit
 end
 
+struct DataPacket{T <: AbstractData}
+   rows::UnitRange
+   data::T
+end
+
+Base.length(d::DataPacket) = count_observations(d.data)
+
 function linear_assemble(data, basis)
-
    @info "Assembling linear problem."
-   row_start, row_count = row_info(data)
-
-   @info "  - Creating feature matrix with size ($(sum(row_count)), $(length(basis)))."
-   A = SharedArray(zeros(sum(row_count),length(basis)))
+   rows = Array{UnitRange}(undef,length(data))
+   rows[1] = 1:count_observations(data[1])
+   for i in 2:length(data)
+      rows[i] = rows[i-1][end] .+ (1:count_observations(data[i]))
+   end
+   packets = DataPacket.(rows, data)
+   sort!(packets, by=length, rev=true)
+   @info "  - Creating feature matrix with size ($(rows[end][end]), $(length(basis)))."
+   A = SharedArray(zeros(rows[end][end],length(basis)))
    Y = SharedArray(zeros(size(A,1)))
    W = SharedArray(zeros(size(A,1)))
-
-   f = i -> linear_fill!(A, Y, W, data[i], basis; row_start=row_start[i])
-   if nprocs() == 1
-       @info "  - Beginning assembly in serial mode."
-       @showprogress map(f, 1:length(data))
-   else
-       @info "  - Beginning assembly in distributed mode with $(nprocs()) processes."
-       @showprogress pmap(f, 1:length(data))
+   @info "  - Beginning assembly in distributed mode with $(nprocs()) processes."
+   (nprocs() > 1) && sendto(workers(), basis=basis)
+   @showprogress pmap(packets) do packet
+      rows, data = packet.rows, packet.data
+      println(rows)
+      println(size(feature_matrix(data, basis)))
+      A[rows,:] .= feature_matrix(data, basis)
+      Y[rows] .= target_vector(data)
+      W[rows] .= weight_vector(data)
    end
-
    @info "  - Assembly completed."
    flush(stdout); flush(stderr)
    return Array(A), Array(Y), Array(W)
-end
-
-function linear_fill!(A, Y, W, dat, basis; row_start=1)
-   i1 = row_start
-   i2 = row_start + count_observations(dat) - 1
-   A[i1:i2,:] .= feature_matrix(dat, basis)
-   Y[i1:i2] .= target_vector(dat)
-   W[i1:i2] .= weight_vector(dat)
-   GC.gc()  # not sure if this is necessary?
-   return nothing
 end
