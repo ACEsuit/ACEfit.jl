@@ -51,11 +51,10 @@ function linear_assemble(data, basis)
    W = SharedArray(zeros(size(A,1)))
    @info "  - Beginning assembly with processor count:  $(nprocs())."
    (nprocs() > 1) && sendto(workers(), basis=basis)
-   @showprogress pmap(packets) do packet
-      rows, data = packet.rows, packet.data
-      A[rows,:] .= feature_matrix(data, basis)
-      Y[rows] .= target_vector(data)
-      W[rows] .= weight_vector(data)
+   @showprogress pmap(packets) do p
+      A[p.rows,:] .= feature_matrix(p.data, basis)
+      Y[p.rows] .= target_vector(p.data)
+      W[p.rows] .= weight_vector(p.data)
    end
    @info "  - Assembly completed."
    flush(stdout); flush(stderr)
