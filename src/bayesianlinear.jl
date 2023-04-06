@@ -162,6 +162,66 @@ $$
 using LinearAlgebra
 using Optim
 
+
+"""
+    bayesian_linear_regression(A, Y; <keyword arguments>)
+
+Perform Bayesian linear regression, possibly with automatic relevance determination.
+
+# Arguments
+
+- `A::Matrix{<:AbstractFloat}`: design matrix, with observations as rows
+- `Y::Vector{<:AbstractFloat}`: target vector
+- `sig_0_floor::AbstractFloat = 1e-8`: lower bound for σ_0, the standard deviation for the coefficient prior.
+- `sig_e_floor::AbstractFloat = 1e-8`: lower bound for σ_ε, the standard deviation for the model error.
+
+### output parameters
+
+- `committee_size::Int = 0`: if nonzero, sample from the posterior and include a committee in the results.
+- `ret_covar::Bool = false`: whether to supply the covariance matrix in the results.
+- `verbose::Bool = true`
+
+### solver parameters
+
+- `factorization::String = "cholesky"`: if "cholesky" performs poorly, try "svd" or "qr".
+- `opt_method::String = "LBFGS"`: method for evidence maximization.
+- `tol::Float64 = 1e-3`: tolerance to use for terminating the evidence maximization.
+- `max_iter::Int = 1000`: iteration limit for evidence maximization.
+"""
+
+function bayesian_linear_regression(
+        A, Y;
+        # regularization settings
+        sig_0_floor = 1e-4,
+        sig_e_floor = 1e-4,
+        ard_threshold = 0.0,
+        # output settings
+        verbose::Bool = true,
+        committee_size::Int = 0,
+        ret_covar::Bool = false,
+        # solver settings
+        factorization = :cholesky,
+        optimizer = :LBFGS,
+        tol::AbstractFloat = 1e-3,
+        max_iter::Int = 1000)
+
+
+    if factorization == :svd
+
+        return bayesian_linear_regression_svd(
+            A, Y;
+            variance_0_floor = sig_0_floor*sig_0_floor,
+            variance_e_floor = sig_e_floor*sig_e_floor,
+            committee_size::Int=0,
+            verbose=verbose,
+            ret_covar=false)
+
+    end
+
+end
+
+# -----
+
 function solve(
     y::Vector{<:AbstractFloat},
     X::Matrix{<:AbstractFloat},
@@ -270,7 +330,8 @@ end
 function bayesian_fit(
     y::Vector{<:AbstractFloat},
     X::Matrix{<:AbstractFloat};
-    variance_floor::AbstractFloat=1e-8,
+    variance_c_floor::AbstractFloat=1e-8,
+    variance_e_floor::AbstractFloat=1e-8,
     verbose::Bool=false,
 )
     if size(X,1) >= size(X,2)
@@ -278,8 +339,8 @@ function bayesian_fit(
     end
 
     function fg!(f, g, x)
-        var_c = variance_floor + x[1]*x[1]
-        var_e = variance_floor + x[2]*x[2]
+        var_c = variance_c_floor + x[1]*x[1]
+        var_e = variance_e_floor + x[2]*x[2]
         if size(X,1) >= size(X,2)
             f = log_marginal_likelihood_overdetermined!(f, g, X, y, var_c, var_e, XTX)
         else
@@ -302,16 +363,17 @@ function bayesian_fit(
 
     lml = -Optim.minimum(res)
     var_c, var_e = Optim.minimizer(res)
-    var_c = variance_floor + var_c*var_c
-    var_e = variance_floor + var_e*var_e
+    var_c = variance_c_floor + var_c*var_c
+    var_e = variance_e_floor + var_e*var_e
 
     return solve(y, X, var_c, var_e), var_c, var_e, lml
 end
 
 function ard_fit(
     y::Vector{<:AbstractFloat},
-    X::Matrix{<:AbstractFloat},
-    variance_floor::AbstractFloat=1e-8;
+    X::Matrix{<:AbstractFloat};
+    variance_c_floor::AbstractFloat=1e-8,
+    variance_e_floor::AbstractFloat=1e-8,
     verbose::Bool=false,
 )
     if size(X,1) >= size(X,2)
@@ -319,8 +381,8 @@ function ard_fit(
     end
 
     function fg!(f, g, x)
-        var_c = variance_floor .+ x[1:end-1].*x[1:end-1]
-        var_e = variance_floor + x[end]*x[end]
+        var_c = variance_c_floor .+ x[1:end-1].*x[1:end-1]
+        var_e = variance_e_floor + x[end]*x[end]
         if size(X,1) >= size(X,2)
             f = log_marginal_likelihood_overdetermined!(f, g, X, y, var_c, var_e, XTX)
         else
@@ -343,10 +405,10 @@ function ard_fit(
 
     lml = -Optim.minimum(res)
     x = Optim.minimizer(res)
-    var_c = variance_floor .+ x[1:end-1].*x[1:end-1]
-    var_e = variance_floor + x[end]*x[end]
+    var_c = variance_c_floor .+ x[1:end-1].*x[1:end-1]
+    var_e = variance_e_floor + x[end]*x[end]
 
-    mask = var_c .> 10*variance_floor
+    mask = var_c .> 10*variance_c_floor
     var_c[.~mask] .= 0
     c_mask = solve(y, X[:,mask], var_c[mask], var_e)
     c = zeros(length(var_c))
@@ -358,7 +420,8 @@ end
 function bayesian_linear_regression_svd(
     X::Matrix{<:AbstractFloat},
     Y::Vector{<:AbstractFloat};
-    variance_floor::AbstractFloat=1e-8,
+    variance_0_floor::AbstractFloat=1e-8,
+    variance_e_floor::AbstractFloat=1e-8,
     committee_size::Int=0,
     verbose::Bool=false,
     ret_covar=false
@@ -395,7 +458,7 @@ function bayesian_linear_regression_svd(
 
     function fg!(f, g, x)
         flush(stdout); flush(stderr)
-        var_0, var_e = variance_floor .+ x.^2
+        var_0, var_e = (variance_0_floor, variance_e_floor) .+ x.^2
         f = log_marginal_likelihood!(f, g, var_0, var_e)
         if f != nothing
             f = -f
@@ -414,7 +477,7 @@ function bayesian_linear_regression_svd(
                    Optim.Options(x_tol=1e-8, g_tol=0.0, show_trace=verbose))
     @info "Optimization complete" "Results"=res
     lml = -Optim.minimum(res)
-    var_0, var_e = variance_floor .+ Optim.minimizer(res).^2
+    var_0, var_e = (variance_0_floor, variance_e_floor) .+ Optim.minimizer(res).^2
 
     UT_Y[1:length(S)] .*= var_0.*S ./ (var_0.*S.*S .+ var_e)
     c = V * UT_Y[1:length(S)]
