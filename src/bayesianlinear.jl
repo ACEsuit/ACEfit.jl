@@ -212,9 +212,9 @@ function bayesian_linear_regression(
             A, Y;
             variance_0_floor = sig_0_floor*sig_0_floor,
             variance_e_floor = sig_e_floor*sig_e_floor,
-            committee_size::Int=0,
-            verbose=verbose,
-            ret_covar=false)
+            committee_size,
+            verbose,
+            ret_covar)
 
     end
 
