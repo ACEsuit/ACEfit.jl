@@ -1,6 +1,6 @@
 module BayesianLinear
 
-export bayesian_fit, ard_fit, bayesian_linear_regression_svd
+export bayesian_linear_regression
 
 #=
 
@@ -170,21 +170,22 @@ Perform Bayesian linear regression, possibly with automatic relevance determinat
 
 # Arguments
 
-- `A::Matrix{<:AbstractFloat}`: design matrix, with observations as rows
-- `Y::Vector{<:AbstractFloat}`: target vector
+- `A::Matrix{<:AbstractFloat}`: design matrix, with observations as rows.
+- `Y::Vector{<:AbstractFloat}`: target vector.
+
+### regularization settings
 - `sig_0_floor::AbstractFloat = 1e-8`: lower bound for σ_0, the standard deviation for the coefficient prior.
 - `sig_e_floor::AbstractFloat = 1e-8`: lower bound for σ_ε, the standard deviation for the model error.
+- `ard_threshold::AbstractFloat = 0.0`: automatic relevance determination.
 
-### output parameters
-
+### output settings
+- `verbose::Bool = true`
 - `committee_size::Int = 0`: if nonzero, sample from the posterior and include a committee in the results.
 - `ret_covar::Bool = false`: whether to supply the covariance matrix in the results.
-- `verbose::Bool = true`
 
-### solver parameters
-
-- `factorization::String = "cholesky"`: if "cholesky" performs poorly, try "svd" or "qr".
-- `opt_method::String = "LBFGS"`: method for evidence maximization.
+### solver settings
+- `factorization::Symbol = :cholesky`: if "cholesky" performs poorly, try "svd" or "qr".
+- `optimizer::Symbol = :LBFGS`: method for evidence maximization.
 - `tol::Float64 = 1e-3`: tolerance to use for terminating the evidence maximization.
 - `max_iter::Int = 1000`: iteration limit for evidence maximization.
 """
@@ -206,7 +207,15 @@ function bayesian_linear_regression(
         max_iter::Int = 1000)
 
 
-    if factorization == :svd
+    if (ard_threshold == 0.0) && (factorization == :cholesky)
+
+        return bayesian_fit(
+            A, Y;
+            variance_c_floor = sig_0_floor*sig_0_floor,
+            variance_e_floor = sig_e_floor*sig_e_floor,
+            verbose = verbose)
+
+    elseif (ard_threshold == 0.0) && (factorization == :svd)
 
         return bayesian_linear_regression_svd(
             A, Y;
@@ -216,8 +225,16 @@ function bayesian_linear_regression(
             verbose,
             ret_covar)
 
-    end
+    elseif (ard_threshold > 0.0) && (factorization == :cholesky)
 
+        @warn "ard_tolerance not passed"
+        return ard_fit(
+            A, Y;
+            variance_c_floor = sig_0_floor*sig_0_floor,
+            variance_e_floor = sig_e_floor*sig_e_floor,
+            verbose = verbose)
+
+    end
 end
 
 # -----
@@ -328,8 +345,8 @@ function log_marginal_likelihood_underdetermined!(
 end
 
 function bayesian_fit(
-    y::Vector{<:AbstractFloat},
-    X::Matrix{<:AbstractFloat};
+    X::Matrix{<:AbstractFloat},
+    y::Vector{<:AbstractFloat};
     variance_c_floor::AbstractFloat=1e-8,
     variance_e_floor::AbstractFloat=1e-8,
     verbose::Bool=false,
@@ -370,8 +387,8 @@ function bayesian_fit(
 end
 
 function ard_fit(
-    y::Vector{<:AbstractFloat},
-    X::Matrix{<:AbstractFloat};
+    X::Matrix{<:AbstractFloat},
+    y::Vector{<:AbstractFloat};
     variance_c_floor::AbstractFloat=1e-8,
     variance_e_floor::AbstractFloat=1e-8,
     verbose::Bool=false,
