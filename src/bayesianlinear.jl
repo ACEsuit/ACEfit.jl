@@ -162,7 +162,6 @@ $$
 using LinearAlgebra
 using Optim
 
-
 """
     bayesian_linear_regression(A, Y; <keyword arguments>)
 
@@ -190,175 +189,161 @@ Perform Bayesian linear regression, possibly with automatic relevance determinat
 - `max_iter::Int = 1000`: iteration limit for evidence maximization.
 """
 
-function bayesian_linear_regression(
-        A, Y;
-        # regularization settings
-        sig_0_floor = 1e-4,
-        sig_e_floor = 1e-4,
-        ard_threshold = 0.0,
-        # output settings
-        verbose::Bool = true,
-        committee_size::Int = 0,
-        ret_covar::Bool = false,
-        # solver settings
-        factorization = :cholesky,
-        optimizer = :LBFGS,
-        tol::AbstractFloat = 1e-3,
-        max_iter::Int = 1000)
-
-
+function bayesian_linear_regression(A, Y;
+                                    # regularization settings
+                                    sig_0_floor = 1e-4,
+                                    sig_e_floor = 1e-4,
+                                    ard_threshold = 0.0,
+                                    # output settings
+                                    verbose::Bool = true,
+                                    committee_size::Int = 0,
+                                    ret_covar::Bool = false,
+                                    # solver settings
+                                    factorization = :cholesky,
+                                    optimizer = :LBFGS,
+                                    tol::AbstractFloat = 1e-3,
+                                    max_iter::Int = 1000)
     if (ard_threshold == 0.0) && (factorization == :cholesky)
-
-        return bayesian_fit(
-            A, Y;
-            variance_c_floor = sig_0_floor*sig_0_floor,
-            variance_e_floor = sig_e_floor*sig_e_floor,
-            verbose = verbose)
+        return bayesian_fit(A, Y;
+                            variance_c_floor = sig_0_floor * sig_0_floor,
+                            variance_e_floor = sig_e_floor * sig_e_floor,
+                            verbose = verbose)
 
     elseif (ard_threshold == 0.0) && (factorization == :svd)
-
-        return bayesian_linear_regression_svd(
-            A, Y;
-            variance_0_floor = sig_0_floor*sig_0_floor,
-            variance_e_floor = sig_e_floor*sig_e_floor,
-            committee_size,
-            verbose,
-            ret_covar)
+        return bayesian_linear_regression_svd(A, Y;
+                                              variance_0_floor = sig_0_floor * sig_0_floor,
+                                              variance_e_floor = sig_e_floor * sig_e_floor,
+                                              committee_size,
+                                              verbose,
+                                              ret_covar)
 
     elseif (ard_threshold > 0.0) && (factorization == :cholesky)
-
         @warn "ard_tolerance not passed"
-        return ard_fit(
-            A, Y;
-            variance_c_floor = sig_0_floor*sig_0_floor,
-            variance_e_floor = sig_e_floor*sig_e_floor,
-            verbose = verbose)
-
+        return ard_fit(A, Y;
+                       variance_c_floor = sig_0_floor * sig_0_floor,
+                       variance_e_floor = sig_e_floor * sig_e_floor,
+                       verbose = verbose)
     end
 end
 
 # -----
 
-function solve(
-    y::Vector{<:AbstractFloat},
-    X::Matrix{<:AbstractFloat},
-    var_c::AbstractFloat,
-    var_e::AbstractFloat,
-)
-    return solve(y, X, var_c*ones(size(X,2)), var_e)
+function solve(y::Vector{<:AbstractFloat},
+               X::Matrix{<:AbstractFloat},
+               var_c::AbstractFloat,
+               var_e::AbstractFloat)
+    return solve(y, X, var_c * ones(size(X, 2)), var_e)
 end
 
-function solve(
-    y::Vector{<:AbstractFloat},
-    X::Matrix{<:AbstractFloat},
-    var_c::Vector{<:AbstractFloat},
-    var_e::AbstractFloat,
-)
-    M = size(X,2)
-    XTX = X'*X
-    Σ_c = Array{Float64}(undef,M,M)
-    BLAS.blascopy!(length(Σ_c), XTX, stride(XTX,1), Σ_c, stride(Σ_c,1))
-    BLAS.scal!(1.0/var_e, Σ_c)
-    for i in 1:M; Σ_c[i,i] += 1.0/var_c[i]; end
+function solve(y::Vector{<:AbstractFloat},
+               X::Matrix{<:AbstractFloat},
+               var_c::Vector{<:AbstractFloat},
+               var_e::AbstractFloat)
+    M = size(X, 2)
+    XTX = X' * X
+    Σ_c = Array{Float64}(undef, M, M)
+    BLAS.blascopy!(length(Σ_c), XTX, stride(XTX, 1), Σ_c, stride(Σ_c, 1))
+    BLAS.scal!(1.0 / var_e, Σ_c)
+    for i in 1:M
+        Σ_c[i, i] += 1.0 / var_c[i]
+    end
     C = cholesky!(Symmetric(Σ_c))
-    return 1.0/var_e*(C \ (X'*y))
+    return 1.0 / var_e * (C \ (X' * y))
 end
 
-function log_marginal_likelihood_overdetermined!(
-    lml::AbstractFloat,
-    grad::Vector{<:AbstractFloat},
-    X::Matrix{<:AbstractFloat},
-    y::Vector{<:AbstractFloat},
-    var_c::AbstractFloat,
-    var_e::AbstractFloat,
-    XTX::Matrix{<:AbstractFloat},
-)
-    var_c_vec = var_c*ones(size(X,2))
-    grad_vec = zeros(size(X,2)+1)
-    lml = log_marginal_likelihood_overdetermined!(lml, grad_vec, X, y, var_c_vec, var_e, XTX)
-    grad[1] = sum(grad_vec[1:end-1])
+function log_marginal_likelihood_overdetermined!(lml::AbstractFloat,
+                                                 grad::Vector{<:AbstractFloat},
+                                                 X::Matrix{<:AbstractFloat},
+                                                 y::Vector{<:AbstractFloat},
+                                                 var_c::AbstractFloat,
+                                                 var_e::AbstractFloat,
+                                                 XTX::Matrix{<:AbstractFloat})
+    var_c_vec = var_c * ones(size(X, 2))
+    grad_vec = zeros(size(X, 2) + 1)
+    lml = log_marginal_likelihood_overdetermined!(lml, grad_vec, X, y, var_c_vec, var_e,
+                                                  XTX)
+    grad[1] = sum(grad_vec[1:(end - 1)])
     grad[2] = grad_vec[end]
     return lml
 end
 
-function log_marginal_likelihood_overdetermined!(
-    lml::AbstractFloat,
-    grad::Vector{<:AbstractFloat},
-    X::Matrix{<:AbstractFloat},
-    y::Vector{<:AbstractFloat},
-    var_c::Vector{<:AbstractFloat},
-    var_e::AbstractFloat,
-    XTX::Matrix{<:AbstractFloat},
-)
-    N = size(X,1)
-    M = size(X,2)
-    Σ_c = Array{Float64}(undef,M,M)
-    BLAS.blascopy!(length(Σ_c), XTX, stride(XTX,1), Σ_c, stride(Σ_c,1))
-    BLAS.scal!(1.0/var_e, Σ_c)
-    for i in 1:M; Σ_c[i,i] += 1.0/var_c[i]; end
+function log_marginal_likelihood_overdetermined!(lml::AbstractFloat,
+                                                 grad::Vector{<:AbstractFloat},
+                                                 X::Matrix{<:AbstractFloat},
+                                                 y::Vector{<:AbstractFloat},
+                                                 var_c::Vector{<:AbstractFloat},
+                                                 var_e::AbstractFloat,
+                                                 XTX::Matrix{<:AbstractFloat})
+    N = size(X, 1)
+    M = size(X, 2)
+    Σ_c = Array{Float64}(undef, M, M)
+    BLAS.blascopy!(length(Σ_c), XTX, stride(XTX, 1), Σ_c, stride(Σ_c, 1))
+    BLAS.scal!(1.0 / var_e, Σ_c)
+    for i in 1:M
+        Σ_c[i, i] += 1.0 / var_c[i]
+    end
     C = cholesky!(Symmetric(Σ_c))
     Σ_c = C \ I(M)
-    μ_c = 1.0/var_e*(C \ (X'*y))
-    lml = - 0.5*logdet(C) - 0.5*sum(log.(var_c)) - 0.5*N*log(var_e) - 0.5*N*log(2*π)
-    lml -= 0.5/var_e*y'*(y-X*μ_c)
-    grad[1:M] .= 0.5*(μ_c.^2 .+ diag(Σ_c) .- var_c)./var_c.^2
-    grad[M+1] = 0.5/var_e^2*(sum((y-X*μ_c).^2) + dot(XTX,Σ_c) - N*var_e)
+    μ_c = 1.0 / var_e * (C \ (X' * y))
+    lml = -0.5 * logdet(C) - 0.5 * sum(log.(var_c)) - 0.5 * N * log(var_e) -
+          0.5 * N * log(2 * π)
+    lml -= 0.5 / var_e * y' * (y - X * μ_c)
+    grad[1:M] .= 0.5 * (μ_c .^ 2 .+ diag(Σ_c) .- var_c) ./ var_c .^ 2
+    grad[M + 1] = 0.5 / var_e^2 * (sum((y - X * μ_c) .^ 2) + dot(XTX, Σ_c) - N * var_e)
     return lml
 end
 
-function log_marginal_likelihood_underdetermined!(
-    lml::AbstractFloat,
-    grad::Vector{<:AbstractFloat},
-    X::Matrix{<:AbstractFloat},
-    y::Vector{<:AbstractFloat},
-    var_c::AbstractFloat,
-    var_e::AbstractFloat,
-)
-    var_c_vec = var_c*ones(size(X,2))
-    grad_vec = zeros(size(X,2)+1)
+function log_marginal_likelihood_underdetermined!(lml::AbstractFloat,
+                                                  grad::Vector{<:AbstractFloat},
+                                                  X::Matrix{<:AbstractFloat},
+                                                  y::Vector{<:AbstractFloat},
+                                                  var_c::AbstractFloat,
+                                                  var_e::AbstractFloat)
+    var_c_vec = var_c * ones(size(X, 2))
+    grad_vec = zeros(size(X, 2) + 1)
     lml = log_marginal_likelihood_underdetermined!(lml, grad_vec, X, y, var_c_vec, var_e)
-    grad[1] = sum(grad_vec[1:end-1])
+    grad[1] = sum(grad_vec[1:(end - 1)])
     grad[2] = grad_vec[end]
     return lml
 end
 
-function log_marginal_likelihood_underdetermined!(
-    lml::AbstractFloat,
-    grad::Vector{<:AbstractFloat},
-    X::Matrix{<:AbstractFloat},
-    y::Vector{<:AbstractFloat},
-    var_c::Vector{<:AbstractFloat},
-    var_e::AbstractFloat,
-)
-    N = size(X,1)
-    M = size(X,2)
-    Σ_y = X*Diagonal(var_c)*X'
-    for i=1:N; Σ_y[i,i] += var_e; end
+function log_marginal_likelihood_underdetermined!(lml::AbstractFloat,
+                                                  grad::Vector{<:AbstractFloat},
+                                                  X::Matrix{<:AbstractFloat},
+                                                  y::Vector{<:AbstractFloat},
+                                                  var_c::Vector{<:AbstractFloat},
+                                                  var_e::AbstractFloat)
+    N = size(X, 1)
+    M = size(X, 2)
+    Σ_y = X * Diagonal(var_c) * X'
+    for i in 1:N
+        Σ_y[i, i] += var_e
+    end
     C = cholesky!(Symmetric(Σ_y))
     invΣy_y = C \ y
-    lml = -0.5*y'*invΣy_y - 0.5*logdet(C) - 0.5*N*log(2*π)
-    grad[1:M] .= 0.5*(X'*invΣy_y).^2
+    lml = -0.5 * y' * invΣy_y - 0.5 * logdet(C) - 0.5 * N * log(2 * π)
+    grad[1:M] .= 0.5 * (X' * invΣy_y) .^ 2
     W = C \ X
-    @views for i=1:M; grad[i] -= 0.5*dot(X[:,i], W[:,i]); end
-    grad[M+1] = 0.5*dot(invΣy_y,invΣy_y) - 0.5*tr(C\I(N))
+    @views for i in 1:M
+        grad[i] -= 0.5 * dot(X[:, i], W[:, i])
+    end
+    grad[M + 1] = 0.5 * dot(invΣy_y, invΣy_y) - 0.5 * tr(C \ I(N))
     return lml
 end
 
-function bayesian_fit(
-    X::Matrix{<:AbstractFloat},
-    y::Vector{<:AbstractFloat};
-    variance_c_floor::AbstractFloat=1e-8,
-    variance_e_floor::AbstractFloat=1e-8,
-    verbose::Bool=false,
-)
-    if size(X,1) >= size(X,2)
-        XTX = X'*X  # advantageous to precompute for overdetermined case
+function bayesian_fit(X::Matrix{<:AbstractFloat},
+                      y::Vector{<:AbstractFloat};
+                      variance_c_floor::AbstractFloat = 1e-8,
+                      variance_e_floor::AbstractFloat = 1e-8,
+                      verbose::Bool = false)
+    if size(X, 1) >= size(X, 2)
+        XTX = X' * X  # advantageous to precompute for overdetermined case
     end
 
     function fg!(f, g, x)
-        var_c = variance_c_floor + x[1]*x[1]
-        var_e = variance_e_floor + x[2]*x[2]
-        if size(X,1) >= size(X,2)
+        var_c = variance_c_floor + x[1] * x[1]
+        var_e = variance_e_floor + x[2] * x[2]
+        if size(X, 1) >= size(X, 2)
             f = log_marginal_likelihood_overdetermined!(f, g, X, y, var_c, var_e, XTX)
         else
             f = log_marginal_likelihood_underdetermined!(f, g, X, y, var_c, var_e)
@@ -367,7 +352,7 @@ function bayesian_fit(
             f = -f
         end
         if g != nothing
-            g .*= -2*x
+            g .*= -2 * x
         end
         return f
     end
@@ -375,32 +360,30 @@ function bayesian_fit(
     res = optimize(Optim.only_fg!(fg!),
                    ones(2),
                    Optim.LBFGS(),
-                   Optim.Options(x_tol=1e-8, g_tol=0.0, show_trace=verbose))
+                   Optim.Options(x_tol = 1e-8, g_tol = 0.0, show_trace = verbose))
     verbose && println(res)
 
     lml = -Optim.minimum(res)
     var_c, var_e = Optim.minimizer(res)
-    var_c = variance_c_floor + var_c*var_c
-    var_e = variance_e_floor + var_e*var_e
+    var_c = variance_c_floor + var_c * var_c
+    var_e = variance_e_floor + var_e * var_e
 
     return solve(y, X, var_c, var_e), var_c, var_e, lml
 end
 
-function ard_fit(
-    X::Matrix{<:AbstractFloat},
-    y::Vector{<:AbstractFloat};
-    variance_c_floor::AbstractFloat=1e-8,
-    variance_e_floor::AbstractFloat=1e-8,
-    verbose::Bool=false,
-)
-    if size(X,1) >= size(X,2)
-        XTX = X'*X  # advantageous to precompute for overdetermined case
+function ard_fit(X::Matrix{<:AbstractFloat},
+                 y::Vector{<:AbstractFloat};
+                 variance_c_floor::AbstractFloat = 1e-8,
+                 variance_e_floor::AbstractFloat = 1e-8,
+                 verbose::Bool = false)
+    if size(X, 1) >= size(X, 2)
+        XTX = X' * X  # advantageous to precompute for overdetermined case
     end
 
     function fg!(f, g, x)
-        var_c = variance_c_floor .+ x[1:end-1].*x[1:end-1]
-        var_e = variance_e_floor + x[end]*x[end]
-        if size(X,1) >= size(X,2)
+        var_c = variance_c_floor .+ x[1:(end - 1)] .* x[1:(end - 1)]
+        var_e = variance_e_floor + x[end] * x[end]
+        if size(X, 1) >= size(X, 2)
             f = log_marginal_likelihood_overdetermined!(f, g, X, y, var_c, var_e, XTX)
         else
             f = log_marginal_likelihood_underdetermined!(f, g, X, y, var_c, var_e)
@@ -409,45 +392,44 @@ function ard_fit(
             f = -f
         end
         if g != nothing
-            g .*= -2*x
+            g .*= -2 * x
         end
         return f
     end
 
     res = optimize(Optim.only_fg!(fg!),
-                   ones(size(X,2)+1),
+                   ones(size(X, 2) + 1),
                    Optim.LBFGS(),
-                   Optim.Options(x_tol=1e-8, g_tol=0.0, show_trace=verbose))
+                   Optim.Options(x_tol = 1e-8, g_tol = 0.0, show_trace = verbose))
     verbose && println(res)
 
     lml = -Optim.minimum(res)
     x = Optim.minimizer(res)
-    var_c = variance_c_floor .+ x[1:end-1].*x[1:end-1]
-    var_e = variance_e_floor + x[end]*x[end]
+    var_c = variance_c_floor .+ x[1:(end - 1)] .* x[1:(end - 1)]
+    var_e = variance_e_floor + x[end] * x[end]
 
-    mask = var_c .> 10*variance_c_floor
+    mask = var_c .> 10 * variance_c_floor
     var_c[.~mask] .= 0
-    c_mask = solve(y, X[:,mask], var_c[mask], var_e)
+    c_mask = solve(y, X[:, mask], var_c[mask], var_e)
     c = zeros(length(var_c))
     c[mask] .= c_mask
 
     return c, var_c, var_e, lml, mask
 end
 
-function bayesian_linear_regression_svd(
-    X::Matrix{<:AbstractFloat},
-    Y::Vector{<:AbstractFloat};
-    variance_0_floor::AbstractFloat=1e-8,
-    variance_e_floor::AbstractFloat=1e-8,
-    committee_size::Int=0,
-    verbose::Bool=false,
-    ret_covar=false
-)
+function bayesian_linear_regression_svd(X::Matrix{<:AbstractFloat},
+                                        Y::Vector{<:AbstractFloat};
+                                        variance_0_floor::AbstractFloat = 1e-8,
+                                        variance_e_floor::AbstractFloat = 1e-8,
+                                        committee_size::Int = 0,
+                                        verbose::Bool = false,
+                                        ret_covar = false)
     @info "Entering bayesian_linear_regression_svd"
     @info "Computing SVD of $(size(X)) matrix" BLAS.get_num_threads() BLAS.get_config()
-    flush(stdout); flush(stderr)
+    flush(stdout)
+    flush(stderr)
     #elapsed = @elapsed U, S, V = svd!(X; full=true, alg=LinearAlgebra.QRIteration())
-    elapsed = @elapsed U, S, V = svd!(X; full=false, alg=LinearAlgebra.QRIteration())
+    elapsed = @elapsed U, S, V = svd!(X; full = false, alg = LinearAlgebra.QRIteration())
     @info "SVD completed after $(elapsed/60) minutes"
 
     UT_Y = transpose(U) * Y
@@ -457,62 +439,65 @@ function bayesian_linear_regression_svd(
         dlml_d0 = 0.0
         dlml_de = 0.0
         for i in 1:length(S)
-            t = var_0*S[i]*S[i] + var_e
-            lml += -0.5*UT_Y[i]*UT_Y[i]/t - 0.5*log(t)
-            dlml_d0 += 0.5*UT_Y[i]*UT_Y[i]*S[i]*S[i]/(t*t) - 0.5*S[i]*S[i]/t
-            dlml_de += 0.5*UT_Y[i]*UT_Y[i]/(t*t) - 0.5/t
+            t = var_0 * S[i] * S[i] + var_e
+            lml += -0.5 * UT_Y[i] * UT_Y[i] / t - 0.5 * log(t)
+            dlml_d0 += 0.5 * UT_Y[i] * UT_Y[i] * S[i] * S[i] / (t * t) -
+                       0.5 * S[i] * S[i] / t
+            dlml_de += 0.5 * UT_Y[i] * UT_Y[i] / (t * t) - 0.5 / t
         end
         #lml += -0.5*dot(UT_Y[length(S)+1:end],UT_Y[length(S)+1:end])/var_e  # for full svd
         #dlml_de += 0.5*dot(UT_Y[length(S)+1:end],UT_Y[length(S)+1:end])/(var_e*var_e)
-        lml += -0.5/var_e*(dot(Y,Y)-dot(UT_Y,UT_Y))                         # for thin svd
-        dlml_de += 0.5/(var_e*var_e)*(dot(Y,Y)-dot(UT_Y,UT_Y))
-        lml += -0.5*(size(X,1)-length(S))*log(var_e)
-        dlml_de += -0.5*(size(X,1)-length(S))/var_e
-        lml += -0.5*size(X,1)*log(2*pi)
+        lml += -0.5 / var_e * (dot(Y, Y) - dot(UT_Y, UT_Y))                         # for thin svd
+        dlml_de += 0.5 / (var_e * var_e) * (dot(Y, Y) - dot(UT_Y, UT_Y))
+        lml += -0.5 * (size(X, 1) - length(S)) * log(var_e)
+        dlml_de += -0.5 * (size(X, 1) - length(S)) / var_e
+        lml += -0.5 * size(X, 1) * log(2 * pi)
         grad_lml .= [dlml_d0, dlml_de]
         return lml
     end
 
     function fg!(f, g, x)
-        flush(stdout); flush(stderr)
-        var_0, var_e = (variance_0_floor, variance_e_floor) .+ x.^2
+        flush(stdout)
+        flush(stderr)
+        var_0, var_e = (variance_0_floor, variance_e_floor) .+ x .^ 2
         f = log_marginal_likelihood!(f, g, var_0, var_e)
         if f != nothing
             f = -f
         end
         if g != nothing
-            g .*= -2*x
+            g .*= -2 * x
         end
         return f
     end
 
     @info "Beginning to maximize marginal likelihood"
-    flush(stdout); flush(stderr)
+    flush(stdout)
+    flush(stderr)
     res = optimize(Optim.only_fg!(fg!),
                    ones(2),
                    Optim.LBFGS(),
-                   Optim.Options(x_tol=1e-8, g_tol=0.0, show_trace=verbose))
+                   Optim.Options(x_tol = 1e-8, g_tol = 0.0, show_trace = verbose))
     @info "Optimization complete" "Results"=res
     lml = -Optim.minimum(res)
-    var_0, var_e = (variance_0_floor, variance_e_floor) .+ Optim.minimizer(res).^2
+    var_0, var_e = (variance_0_floor, variance_e_floor) .+ Optim.minimizer(res) .^ 2
 
-    UT_Y[1:length(S)] .*= var_0.*S ./ (var_0.*S.*S .+ var_e)
+    UT_Y[1:length(S)] .*= var_0 .* S ./ (var_0 .* S .* S .+ var_e)
     c = V * UT_Y[1:length(S)]
 
-    res = Dict{String,Any}(
-        "c" => c,
-        "lml" => lml,
-        "var_0" => var_0,
-        "var_e" => var_e)
+    res = Dict{String, Any}("c" => c,
+                            "lml" => lml,
+                            "var_0" => var_0,
+                            "var_e" => var_e)
 
     if committee_size > 0
-        committee = zeros(size(X,2), committee_size)
-        covar = 1.0 ./ (S.*S/var_e .+ 1.0/var_0)
-        for i = 1:committee_size
-            committee[:,i] .= c + V*Diagonal(sqrt.(covar))*transpose(V)*randn(size(X,2))
+        committee = zeros(size(X, 2), committee_size)
+        covar = 1.0 ./ (S .* S / var_e .+ 1.0 / var_0)
+        for i in 1:committee_size
+            committee[:, i] .= c +
+                               V * Diagonal(sqrt.(covar)) * transpose(V) * randn(size(X, 2))
         end
         res["committee"] = committee
-        ret_covar && (res["covar"] = V*Diagonal(covar)*transpose(V))
+        ret_covar && (res["covar"] = V * Diagonal(covar) * transpose(V))
     end
 
     return res
