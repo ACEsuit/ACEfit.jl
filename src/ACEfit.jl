@@ -10,7 +10,6 @@ include("bayesianlinear.jl")
 include("data.jl")
 include("assemble.jl")
 include("solvers.jl")
-include("solvers_pycall.jl")
 include("fit.jl")
 
 end
