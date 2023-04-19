@@ -10,6 +10,9 @@ end
 
 Base.length(d::DataPacket) = count_observations(d.data)
 
+"""
+Assemble feature matrix, target vector, and weight vector for given data and basis.
+"""
 function assemble(data::AbstractVector{<:AbstractData}, basis)
     @info "Assembling linear problem."
     rows = Array{UnitRange}(undef, length(data))  # row ranges for each element of data
