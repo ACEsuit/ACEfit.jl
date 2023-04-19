@@ -55,7 +55,7 @@ end
 
 QR(; lambda = 0.0, P = I) = QR(lambda, P)
          
-function linear_solve(solver::QR, A, y)
+function solve(solver::QR, A, y)
    if solver.lambda == 0 
       AP = A 
       yP = y 
@@ -97,7 +97,7 @@ end
 
 RRQR(; rtol = 1e-15, P = I) = RRQR(rtol, P) 
 
-function linear_solve(solver::RRQR, A, y)
+function solve(solver::RRQR, A, y)
    AP = A / solver.P 
    θP = pqrfact(AP, rtol = solver.rtol) \ y 
    return Dict{String,Any}("C" => solver.P \ θP)
@@ -117,7 +117,7 @@ end
 
 LSQR(; damp=5e-3, atol=1e-6, conlim=1e8, maxiter=100000, verbose=false, P=nothing) = LSQR(damp, atol, conlim, maxiter, verbose, P)
 
-function linear_solve(solver::LSQR, A, y)
+function solve(solver::LSQR, A, y)
    @warn "Need to apply preconditioner in LSQR."
    println("damp  ", solver.damp)
    println("atol  ", solver.atol)
@@ -135,7 +135,7 @@ Bayesian Linear Regression
 struct BL
 end
 
-function linear_solve(solver::BL, A, y)
+function solve(solver::BL, A, y)
    c, _, _, _ = bayesian_linear_regression(A, y; verbose=false)
    return Dict{String,Any}("C" => c)
 end
@@ -146,7 +146,7 @@ Bayesian ARD
 struct BARD
 end
 
-function linear_solve(solver::BARD, A, y)
+function solve(solver::BARD, A, y)
    c, _, _, _, _ = bayesian_linear_regression(A, y; ard_threshold=0.1, verbose=false)
    return Dict{String,Any}("C" => c)
 end
@@ -161,7 +161,7 @@ end
 BayesianLinearRegressionSVD(; verbose=false, committee_size=0) =
     BayesianLinearRegressionSVD(verbose, committee_size)
 
-function linear_solve(solver::BayesianLinearRegressionSVD, A, y)
+function solve(solver::BayesianLinearRegressionSVD, A, y)
    blr = bayesian_linear_regression(A, y; verbose=solver.verbose, committee_size=solver.committee_size, factorization=:svd)
    results = Dict{String,Any}("C" => blr["c"])
    haskey(blr, "committee") && (results["committee"] = blr["committee"])

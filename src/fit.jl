@@ -14,7 +14,7 @@ function linear_fit(
     !isnothing(P) && (A = A*pinv(P))
     GC.gc()
     @info "Solving linear problem."
-    results = linear_solve(solver, A, Y)
+    results = solve(solver, A, Y)
     C = results["C"]
     @info "Finished solving."
     if !isnothing(P)
