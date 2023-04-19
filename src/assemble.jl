@@ -1,33 +1,7 @@
 using Distributed
-using LinearAlgebra
 using ParallelDataTransfer
 using ProgressMeter
 using SharedArrays
-
-function linear_fit(data::AbstractVector, basis, solver=QR(); P=nothing)
-    @info "Entering linear_assemble"
-    A, Y, W = linear_assemble(data, basis)
-    @info "After linear_assemble"
-    flush(stdout); flush(stderr)
-    lmul!(Diagonal(W),A)
-    Y = W.*Y
-    !isnothing(P) && (A = A*pinv(P))
-    GC.gc()
-    @info "Entering linear_solve"
-    results = linear_solve(solver, A, Y)
-    C = results["C"]
-    @info "After linear_solve"
-    if !isnothing(P)
-        A = A*P
-        C = pinv(P)*C
-        # TODO: deapply preconditioner to committee
-    end
-    lmul!(inv(Diagonal(W)),A)
-    Y = (1.0./W).*Y
-    fit = Dict{String,Any}("C" => C)
-    haskey(results, "committee") && (fit["committee"] = results["committee"])
-    return fit
-end
 
 struct DataPacket{T <: AbstractData}
    rows::UnitRange
@@ -36,7 +10,7 @@ end
 
 Base.length(d::DataPacket) = count_observations(d.data)
 
-function linear_assemble(data::AbstractVector{<:AbstractData}, basis)
+function assemble(data::AbstractVector{<:AbstractData}, basis)
    @info "Assembling linear problem."
    rows = Array{UnitRange}(undef,length(data))  # row ranges for each element of data
    rows[1] = 1:count_observations(data[1])
