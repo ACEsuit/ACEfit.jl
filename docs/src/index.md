@@ -4,7 +4,7 @@ CurrentModule = ACEfit
 
 # ACEfit
 
-Documentation for [ACEfit](https://github.com/cortner/ACEfit.jl).
+Documentation for [ACEfit](https://github.com/ACEsuit/ACEfit.jl).
 
 ```@index
 ```
