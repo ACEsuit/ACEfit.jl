@@ -7,11 +7,8 @@ function __init__()
 end
 
 include("bayesianlinear.jl")
-
 include("data.jl")
-
 include("linear.jl")
-
 include("solvers.jl")
 
 end
