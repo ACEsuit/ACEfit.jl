@@ -1,10 +1,10 @@
 
-using ACEfit 
+using ACEfit
 using LinearAlgebra
 
 @info("Test Solver on overdetermined system")
 Nobs = 10_000
-Nfeat = 100 
+Nfeat = 100
 A = randn(Nobs, Nfeat) / sqrt(Nobs)
 y = randn(Nobs)
 P = Diagonal(1.0 .+ rand(Nfeat))
@@ -52,7 +52,7 @@ C = results["C"]
 @show norm(C)
 
 @info(" ... LSQR")
-solver = ACEfit.LSQR(damp=0, atol=1e-6)
+solver = ACEfit.LSQR(damp = 0, atol = 1e-6)
 results = ACEfit.linear_solve(solver, A, y)
 C = results["C"]
 @show norm(A * C - y)
