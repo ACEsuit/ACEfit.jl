@@ -103,43 +103,18 @@ function solve(solver::LSQR, A, y)
 end
 
 @doc raw"""
-Bayesian Linear Regression
+`struct BLR` : Bayesian linear regression
+
+    Refer to bayesianlinear.jl (for now) for kwarg definitions.
 """
-struct BL
+struct BLR
+    kwargs::Dict{Any,Any}
 end
 
-function solve(solver::BL, A, y)
-    c, _, _, _ = bayesian_linear_regression(A, y; verbose = false)
-    return Dict{String, Any}("C" => c)
+function BLR(; kwargs...)
+    return BLR(Dict(kwargs))
 end
 
-@doc raw"""
-Bayesian ARD
-"""
-struct BARD
-end
-
-function solve(solver::BARD, A, y)
-    c, _, _, _, _ = bayesian_linear_regression(A, y; ard_threshold = 0.1, verbose = false)
-    return Dict{String, Any}("C" => c)
-end
-
-@doc raw"""
-Bayesian Linear Regression SVD
-"""
-struct BayesianLinearRegressionSVD
-    verbose::Bool
-    committee_size::Any
-end
-function BayesianLinearRegressionSVD(; verbose = false, committee_size = 0)
-    BayesianLinearRegressionSVD(verbose, committee_size)
-end
-
-function solve(solver::BayesianLinearRegressionSVD, A, y)
-    blr = bayesian_linear_regression(A, y; verbose = solver.verbose,
-                                     committee_size = solver.committee_size,
-                                     factorization = :svd)
-    results = Dict{String, Any}("C" => blr["c"])
-    haskey(blr, "committee") && (results["committee"] = blr["committee"])
-    return results
+function solve(solver::BLR, A, y)
+    return bayesian_linear_regression(A, y; solver.kwargs...)
 end
