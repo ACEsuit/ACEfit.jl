@@ -5,36 +5,6 @@ using PyCall
 using .BayesianLinear
 
 @doc raw"""
-create_solver(params::Dict)
-
-Convenience function for creating a solver. The `params` should contain
-a `type`, whose value is a solver type. The remaining `params` are passed
-as keyword arguments to the solver's constructor.
-
-Valid solver types: "QR, LSQR, RRQR, SKLEARN_BRR, SKLEARN_ARD"
-"""
-function create_solver(params::Dict)
-    params = copy(params)
-    solver = uppercase(pop!(params, "type"))
-    params = Dict(Symbol(k) => v for (k, v) in pairs(params))
-    if solver == "QR"
-        return QR(; params...)
-    elseif solver == "LSQR"
-        return LSQR(; params...)
-    elseif solver == "RRQR"
-        return RRQR(; params...)
-    elseif solver == "SKLEARN_BRR"
-        return SKLEARN_BRR(; params...)
-    elseif solver == "SKLEARN_ARD"
-        return SKLEARN_ARD(; params...)
-    elseif solver == "BLR"
-        return BayesianLinearRegressionSVD(; params...)
-    else
-        @error "ACEfit.create_solver does not recognize $(solver)."
-    end
-end
-
-@doc raw"""
 `struct QR` : linear least squares solver, using standard QR factorisation; 
 this solver computes 
 ```math 
