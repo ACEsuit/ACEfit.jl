@@ -72,22 +72,8 @@ C = results["C"]
 @show norm(A * C - y)
 @show norm(C)
 
-@info(" ... Bayesian Linear")
-solver = ACEfit.BL()
-results = ACEfit.solve(solver, A, y)
-C = results["C"]
-@show norm(A * C - y)
-@show norm(C)
-
-@info(" ... Bayesian ARD")
-solver = ACEfit.BARD()
-results = ACEfit.solve(solver, A, y)
-C = results["C"]
-@show norm(A * C - y)
-@show norm(C)
-
-@info(" ... Bayesian Linear Regression SVD")
-solver = ACEfit.BayesianLinearRegressionSVD()
+@info(" ... BLR")
+solver = ACEfit.BLR()
 results = ACEfit.solve(solver, A, y)
 C = results["C"]
 @show norm(A * C - y)
