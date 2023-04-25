@@ -368,7 +368,9 @@ function bayesian_fit(X::Matrix{<:AbstractFloat},
     var_c = variance_c_floor + var_c * var_c
     var_e = variance_e_floor + var_e * var_e
 
-    return solve(y, X, var_c, var_e), var_c, var_e, lml
+    C = solve(y, X, var_c, var_e)
+
+    return Dict("C" => C)
 end
 
 function ard_fit(X::Matrix{<:AbstractFloat},
@@ -414,7 +416,7 @@ function ard_fit(X::Matrix{<:AbstractFloat},
     c = zeros(length(var_c))
     c[mask] .= c_mask
 
-    return c, var_c, var_e, lml, mask
+    return Dict("C" => c)
 end
 
 function bayesian_linear_regression_svd(X::Matrix{<:AbstractFloat},
