@@ -1,7 +1,6 @@
 using LinearAlgebra: qr, I, norm
 using LowRankApprox: pqrfact
 using IterativeSolvers
-using PyCall
 using .BayesianLinear
 
 @doc raw"""
