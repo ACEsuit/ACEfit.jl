@@ -1,6 +1,7 @@
 
 using ACEfit
 using LinearAlgebra
+using PythonCall
 
 @info("Test Solver on overdetermined system")
 Nobs = 10_000
