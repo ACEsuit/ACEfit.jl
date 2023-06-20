@@ -1,4 +1,5 @@
 using ACEfit
+using PythonCall
 using Documenter
 
 DocMeta.setdocmeta!(ACEfit, :DocTestSetup, :(using ACEfit); recursive = true)
