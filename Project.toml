@@ -11,7 +11,6 @@ LowRankApprox = "898213cb-b102-5a47-900c-97e73b919f73"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 ParallelDataTransfer = "2dcacdae-9679-587a-88bb-8b444fb7085b"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
-#PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
 SharedArrays = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
@@ -22,13 +21,12 @@ PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 ACEfit_PythonCall_ext = "PythonCall"
 
 [compat]
-julia = "1.6"
+julia = "1.9"
 IterativeSolvers = "0.9.2"
 LowRankApprox = "0.5.3"
 Optim = "1.7"
 ParallelDataTransfer = "0.5.0"
 ProgressMeter = "1.7"
-#PyCall = "1.92"
 PythonCall = "0.9"
 StaticArrays = "1.5"
 
