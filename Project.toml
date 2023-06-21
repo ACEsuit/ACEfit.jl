@@ -1,7 +1,7 @@
 name = "ACEfit"
 uuid = "ad31a8ef-59f5-4a01-b543-a85c2f73e95c"
 authors = ["William C Witt <witt.chuck@gmail.com>, Christoph Ortner <christophortner0@gmail.com> and contributors"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
