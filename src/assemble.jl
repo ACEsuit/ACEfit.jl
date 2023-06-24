@@ -65,10 +65,10 @@ function mt_assemble(data::AbstractVector{<:AbstractData}, basis)
 
         while next <= length(packets)
             # retrieve the next packet 
-            lock(_lock)
             if next > length(packets)
                 break
             end
+            lock(_lock)
             p = packets[next]
             next += 1
             unlock(_lock)
