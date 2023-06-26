@@ -52,7 +52,7 @@ function assemble_threaded(data::AbstractVector{<:AbstractData}, basis)
     A = SharedArray(zeros(rows[end][end], length(basis)))
     Y = SharedArray(zeros(size(A, 1)))
     W = SharedArray(zeros(size(A, 1)))
-    @info "  - Beginning assembly with thread count:  $(nthreads())."
+    @info "  - Beginning assembly with thread count:  $(Threads.nthreads())."
     tmap(packets) do p
         A[p.rows, :] .= feature_matrix(p.data, basis)
         Y[p.rows] .= target_vector(p.data)
