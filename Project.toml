@@ -14,6 +14,7 @@ ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 SharedArrays = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 ThreadedIterables = "11d239b0-c0b9-11e8-1935-d5cfa53abb03"
+ThreadsX = "ac1d9e8a-700a-412c-b207-f0111f4b6c0d"
 
 [weakdeps]
 PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
