@@ -58,6 +58,7 @@ function assemble_threadediterables(data::AbstractVector{<:AbstractData}, basis)
         A[p.rows, :] .= feature_matrix(p.data, basis)
         Y[p.rows] .= target_vector(p.data)
         W[p.rows] .= weight_vector(p.data)
+        GC.gc()
     end
     @info "  - Assembly completed."
     return A, Y, W
@@ -81,6 +82,7 @@ function assemble_threadsx(data::AbstractVector{<:AbstractData}, basis)
         A[p.rows, :] .= feature_matrix(p.data, basis)
         Y[p.rows] .= target_vector(p.data)
         W[p.rows] .= weight_vector(p.data)
+        GC.gc()
     end
     @info "  - Assembly completed."
     return A, Y, W
@@ -104,6 +106,7 @@ function assemble_threadsx_v2(data::AbstractVector{<:AbstractData}, basis)
         A[p.rows, :] .= feature_matrix(p.data, basis)
         Y[p.rows] .= target_vector(p.data)
         W[p.rows] .= weight_vector(p.data)
+        GC.gc()
     end
     @info "  - Assembly completed."
     return A, Y, W
