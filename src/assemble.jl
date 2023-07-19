@@ -34,6 +34,7 @@ function assemble(data::AbstractVector{<:AbstractData}, basis)
         A[p.rows, :] .= feature_matrix(p.data, basis)
         Y[p.rows] .= target_vector(p.data)
         W[p.rows] .= weight_vector(p.data)
+        GC.gc()
     end
     @info "  - Assembly completed."
     return Array(A), Array(Y), Array(W)
