@@ -14,7 +14,7 @@ Base.length(d::DataPacket) = count_observations(d.data)
 """
 Assemble feature matrix, target vector, and weight vector for given data and basis.
 """
-function assemble(data::AbstractVector{<:AbstractData}, basis)
+function assemble(data::AbstractVector{<:AbstractData}, basis; do_gc = true)
     @info "Assembling linear problem."
     rows = Array{UnitRange}(undef, length(data))  # row ranges for each element of data
     rows[1] = 1:count_observations(data[1])
@@ -33,7 +33,7 @@ function assemble(data::AbstractVector{<:AbstractData}, basis)
         A[p.rows, :] .= feature_matrix(p.data, basis)
         Y[p.rows] .= target_vector(p.data)
         W[p.rows] .= weight_vector(p.data)
-        GC.gc()
+        do_gc && GC.gc()
     end
     @info "  - Assembly completed."
     return Array(A), Array(Y), Array(W)
@@ -43,7 +43,7 @@ end
 """
 Assemble feature matrix, target vector, and weight vector for given data and basis.
 """
-function mt_assemble(data::AbstractVector{<:AbstractData}, basis)
+function mt_assemble(data::AbstractVector{<:AbstractData}, basis; do_gc = true)
     @info "Multi-threaded assembly of linear problem."
     rows = Array{UnitRange}(undef, length(data))  # row ranges for each element of data
     rows[1] = 1:count_observations(data[1])
@@ -94,6 +94,7 @@ function mt_assemble(data::AbstractVector{<:AbstractData}, basis)
                 _prog_ctr += length(p.rows)
                 ProgressMeter.update!(_prog, _prog_ctr)
                 unlock(_lock)
+                do_gc && GC.gc()
             catch 
                 @info("failed assembly: cur = $cur")
                 push!(failed, cur)
