@@ -1,4 +1,4 @@
-using LinearAlgebra
+using LinearAlgebra: Diagonal, lmul!, pinv
 
 function linear_fit(data::AbstractVector{<:AbstractData},
                     basis,
