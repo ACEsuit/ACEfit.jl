@@ -126,7 +126,10 @@ struct SKLEARN_BRR
     n_iter::Integer
 end
 
-SKLEARN_BRR(; tol = 1e-3, n_iter = 300) = SKLEARN_BRR(tol, n_iter)
+function SKLEARN_BRR(; tol = 1e-3, n_iter = 300)
+    @warn "SKLearn will transition to MLJ in future, please upgrade your script to reflect this."
+    SKLEARN_BRR(tol, n_iter)
+end
 
 # solve(solver::SKLEARN_BRR, ...) is implemented in ext/
 
@@ -140,6 +143,7 @@ struct SKLEARN_ARD
 end
 
 function SKLEARN_ARD(; n_iter = 300, tol = 1e-3, threshold_lambda = 10000)
+    @warn "SKLearn will transition to MLJ in future, please upgrade your script to reflect this."
     SKLEARN_ARD(n_iter, tol, threshold_lambda)
 end
 
