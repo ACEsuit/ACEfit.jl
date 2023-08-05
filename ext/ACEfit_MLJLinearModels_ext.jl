@@ -47,7 +47,7 @@ function  ACEfit.solve(solver::Union{
     mach = machine(solver, Atable, y)
     MLJ.fit!(mach)
     params = fitted_params(mach)
-    return Dict{String, Any}("C" => params.coef )
+    return Dict{String, Any}("C" => map( x->x.second,  params.coefs) )
 end
 
 end

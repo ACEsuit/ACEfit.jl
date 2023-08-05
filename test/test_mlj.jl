@@ -14,7 +14,15 @@ P = Diagonal(1.0 .+ rand(Nfeat))
 @info(" ... MLJLinearModels LinearRegressor")
 LinearRegressor = @load LinearRegressor pkg=MLJLinearModels
 solver = LinearRegressor()
-solver = ACEfit.LSQR(damp = 0, atol = 1e-6)
+results = ACEfit.solve(solver, A, y)
+C = results["C"]
+@show norm(A * C - y)
+@show norm(C)
+
+
+@info(" ... MLJLinearModels LassoRegressor")
+LassoRegressor = @load LassoRegressor pkg=MLJLinearModels
+solver = LassoRegressor()
 results = ACEfit.solve(solver, A, y)
 C = results["C"]
 @show norm(A * C - y)
