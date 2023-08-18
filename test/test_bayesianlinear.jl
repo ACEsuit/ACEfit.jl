@@ -11,7 +11,7 @@ Y = float.([1; 2; 1])
 res = ACEfit.BayesianLinear.bayesian_linear_regression_svd(X, Y;
                                                            committee_size = committee_size,
                                                            ret_covar = true)
-mean, committee, covar = (res["c"], res["committee"], res["covar"])
+mean, committee, covar = (res["C"], res["committee"], res["covar"])
 # test mean
 mean_approx = sum(committee; dims = 2) / committee_size
 @test maximum(abs.(mean_approx - mean)) < 0.01
