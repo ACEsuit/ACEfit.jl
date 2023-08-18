@@ -33,7 +33,7 @@ function assemble(data::AbstractVector{<:AbstractData}, basis)
         GC.gc()
     end
     @info "  - Assembly completed."
-    return Array(A), Array(Y)
+    return Array(A), Array(Y), assemble_weights(data)
 end
 
 """
@@ -48,7 +48,7 @@ function assemble_weights(data::AbstractVector{<:AbstractData})
     end
     packets = DataPacket.(rows, data)
     sort!(packets, by = length, rev = true)
-    W = SharedArray(zeros(size(rows[end][end], 1)))
+    W = SharedArray(zeros(rows[end][end]))
     @showprogress pmap(packets) do p
         W[p.rows] .= weight_vector(p.data)
     end
