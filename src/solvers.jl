@@ -148,3 +148,23 @@ function SKLEARN_ARD(; n_iter = 300, tol = 1e-3, threshold_lambda = 10000)
 end
 
 # solve(solver::SKLEARN_ARD, ...) is implemented in ext/
+
+using CompressedSensing
+
+@doc raw"""
+`struct FSBL` : Fast Sparse Bayesian learning (Tipping 2003)
+"""
+struct FSBL
+    var::Float64
+    kwargs::Dict{Any,Any}
+end
+
+function FSBL(var=0.1; kwargs...)
+    return FSBL(var, Dict(kwargs))
+end
+
+function solve(solver::FSBL, A, y)
+    c = CompressedSensing.fsbl(A, y, solver.var; solver.kwargs...)
+    res = Dict{String, Any}("C" => c)
+    return res                                
+end

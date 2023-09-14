@@ -79,3 +79,10 @@ results = ACEfit.solve(solver, A, y)
 C = results["C"]
 @show norm(A * C - y)
 @show norm(C)
+
+@info(" ... FSBL")
+solver = ACEfit.FSBL()
+results = ACEfit.solve(solver, A, y)
+C = results["C"]
+@show norm(A * C - y)
+@show norm(C)
