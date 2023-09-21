@@ -1,56 +1,38 @@
 using Distributed
-using ParallelDataTransfer
 using ProgressMeter
-using SharedArrays
 
-struct DataPacket{T <: AbstractData}
-    rows::UnitRange
-    data::T
-end
-
-Base.length(d::DataPacket) = count_observations(d.data)
 
 """
+    assemble(data::AbstractArray, basis; kwargs...)
+
 Assemble feature matrix and target vector for given data and basis.
+`kwargs` are used to control `feature_matrix`, `target_vector` and
+`weight_vector` calculations.
 """
-function assemble(data::AbstractVector{<:AbstractData}, basis)
-    @info "Assembling linear problem."
-    rows = Array{UnitRange}(undef, length(data))  # row ranges for each element of data
-    rows[1] = 1:count_observations(data[1])
-    for i in 2:length(data)
-        rows[i] = rows[i - 1][end] .+ (1:count_observations(data[i]))
+function assemble(data::AbstractArray, basis; kwargs...)
+    W = Threads.@spawn ACEfit.assemble_weights(data; kwargs...)
+    raw_data = @showprogress "Assembly progress:" pmap( data ) do d
+        A = ACEfit.feature_matrix(d, basis; kwargs...)
+        Y = ACEfit.target_vector(d; kwargs...)
+        (A, Y)
     end
-    packets = DataPacket.(rows, data)
-    sort!(packets, by = length, rev = true)
-    (nprocs() > 1) && sendto(workers(), basis = basis)
-    @info "  - Creating feature matrix with size ($(rows[end][end]), $(length(basis)))."
-    A = SharedArray(zeros(rows[end][end], length(basis)))
-    Y = SharedArray(zeros(size(A, 1)))
-    @info "  - Beginning assembly with processor count:  $(nprocs())."
-    @showprogress pmap(packets) do p
-        A[p.rows, :] .= feature_matrix(p.data, basis)
-        Y[p.rows] .= target_vector(p.data)
-        GC.gc()
-    end
-    @info "  - Assembly completed."
-    return Array(A), Array(Y), assemble_weights(data)
+    A = [ a[1] for a in raw_data ]
+    Y = [ a[2] for a in raw_data ]
+
+    A_final = reduce(vcat, A)
+    Y_final = reduce(vcat, Y)
+    return A_final, Y_final, fetch(W)
 end
 
 """
+    assemble_weights(data::AbstractArray; kwargs...)
+
 Assemble full weight vector for vector of data elements.
+`kwargs` are used to give extra commands for `weight_vector calculation`.
 """
-function assemble_weights(data::AbstractVector{<:AbstractData})
-    @info "Assembling full weight vector."
-    rows = Array{UnitRange}(undef, length(data))  # row ranges for each element of data
-    rows[1] = 1:count_observations(data[1])
-    for i in 2:length(data)
-        rows[i] = rows[i - 1][end] .+ (1:count_observations(data[i]))
+function assemble_weights(data::AbstractArray; kwargs...)
+    w = map( data ) do d
+        ACEfit.weight_vector(d; kwargs...)
     end
-    packets = DataPacket.(rows, data)
-    sort!(packets, by = length, rev = true)
-    W = SharedArray(zeros(rows[end][end]))
-    @showprogress pmap(packets) do p
-        W[p.rows] .= weight_vector(p.data)
-    end
-    return Array(W)
+    return reduce(vcat, w)
 end
