@@ -1,4 +1,5 @@
 using Distributed
+using Folds
 using ParallelDataTransfer
 using ProgressMeter
 using SharedArrays
@@ -42,7 +43,7 @@ end
 """
 Assemble feature matrix and target vector for given data and basis.
 """
-function assemble(data::AbstractVector{<:AbstractData}, basis; do_gc = true)
+function assemble_mixed(data::AbstractVector{<:AbstractData}, basis; mode=:threaded)
     @info "Assembling linear problem."
     rows = Array{UnitRange}(undef, length(data))  # row ranges for each element of data
     rows[1] = 1:count_observations(data[1])
@@ -51,15 +52,26 @@ function assemble(data::AbstractVector{<:AbstractData}, basis; do_gc = true)
     end
     packets = DataPacket.(rows, data)
     sort!(packets, by = length, rev = true)
-    (nprocs() > 1) && sendto(workers(), basis = basis)
     @info "  - Creating feature matrix with size ($(rows[end][end]), $(length(basis)))."
     A = SharedArray(zeros(rows[end][end], length(basis)))
     Y = SharedArray(zeros(size(A, 1)))
-    @info "  - Beginning assembly with processor count:  $(nprocs())."
-    @showprogress pmap(packets) do p
-        A[p.rows, :] .= feature_matrix(p.data, basis)
+    W = SharedArray(zeros(size(A, 1)))
+    if mode == :serial
+        @info "  - Beginning serial assembly."
+    elseif mode == :threaded
+        @info "  - Beginning threaded assembly with $(Threads.nthreads()) threads."
+        map = Folds.map
+    elseif mode == :distributed
+        @info "  - Beginning distributed assembly with $(nprocs()) processes."
+        map = pmap
+        (nprocs() > 1) && sendto(workers(), basis = basis)
+    end
+    progress = Progress(length(data))
+    map(packets) do p
+        A[p.rows,:] .= feature_matrix(p.data, basis)
         Y[p.rows] .= target_vector(p.data)
-        do_gc && GC.gc()
+        next!(progress)
+        GC.gc()
     end
     @info "  - Assembly completed."
     return Array(A), Array(Y), assemble_weights(data)
@@ -80,6 +92,8 @@ function assemble_weights(data::AbstractVector{<:AbstractData})
     W = SharedArray(zeros(rows[end][end]))
     @showprogress pmap(packets) do p
         W[p.rows] .= weight_vector(p.data)
+        next!(progress)
+        GC.gc()
     end
     return Array(W)
 end
