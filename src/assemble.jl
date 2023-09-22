@@ -213,3 +213,26 @@ function assemble_threadsx(data::AbstractVector{<:AbstractData}, basis)
     @info "  - Assembly completed."
     return A, Y, W
 end
+
+
+function assemble_new(data::AbstractArray, basis; batch_size=1, kwargs...)
+    W = Threads.@spawn ACEfit.assemble_weights_new(data; kwargs...)
+    raw_data = @showprogress desc="Assembly progress:" pmap( data; batch_size=batch_size ) do d
+        A = ACEfit.feature_matrix(d, basis; kwargs...)
+        Y = ACEfit.target_vector(d; kwargs...)
+        (A, Y)
+    end
+    A = [ a[1] for a in raw_data ]
+    Y = [ a[2] for a in raw_data ]
+
+    A_final = reduce(vcat, A)
+    Y_final = reduce(vcat, Y)
+    return A_final, Y_final, fetch(W)
+end
+
+function assemble_weights_new(data::AbstractArray; kwargs...)
+    w = map( data ) do d
+        ACEfit.weight_vector(d; kwargs...)
+    end
+    return reduce(vcat, w)
+end
