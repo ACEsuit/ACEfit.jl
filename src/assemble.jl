@@ -9,9 +9,9 @@ Assemble feature matrix and target vector for given data and basis.
 `kwargs` are used to control `feature_matrix`, `target_vector` and
 `weight_vector` calculations.
 """
-function assemble(data::AbstractArray, basis; kwargs...)
+function assemble(data::AbstractArray, basis; batch_size=1, kwargs...)
     W = Threads.@spawn ACEfit.assemble_weights(data; kwargs...)
-    raw_data = @showprogress desc="Assembly progress:" pmap( data ) do d
+    raw_data = @showprogress desc="Assembly progress:" pmap( data; batch_size=batch_size ) do d
         A = ACEfit.feature_matrix(d, basis; kwargs...)
         Y = ACEfit.target_vector(d; kwargs...)
         (A, Y)
