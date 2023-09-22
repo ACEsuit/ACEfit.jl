@@ -11,7 +11,7 @@ Assemble feature matrix and target vector for given data and basis.
 """
 function assemble(data::AbstractArray, basis; kwargs...)
     W = Threads.@spawn ACEfit.assemble_weights(data; kwargs...)
-    raw_data = @showprogress "Assembly progress:" pmap( data ) do d
+    raw_data = @showprogress desc="Assembly progress:" pmap( data ) do d
         A = ACEfit.feature_matrix(d, basis; kwargs...)
         Y = ACEfit.target_vector(d; kwargs...)
         (A, Y)

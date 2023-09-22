@@ -31,7 +31,7 @@ MLJLinearModels = "0.9"
 MLJScikitLearnInterface = "0.5"
 LowRankApprox = "0.5.3"
 Optim = "1.7"
-ProgressMeter = "1.7"
+ProgressMeter = "1.8"
 PythonCall = "0.9"
 StaticArrays = "1.5"
 
