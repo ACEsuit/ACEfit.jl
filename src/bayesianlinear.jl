@@ -126,7 +126,7 @@ $$
 \begin{aligned}
 \mathrm{\mathcal{L}}
 = &- \frac{1}{2} \sum_{i=1}^r \frac{[\mathbf{U}^T \mathbf{y}]_i^2}{\sigma_0^2 d_i^2 + \sigma_\epsilon^2}
-    - \frac{1}{2} \sum_{i=r+1}^N \frac{[\mathbf{U}^T \mathbf{y}]_i^2}{\sigma_\epsilon^2} 
+    - \frac{1}{2} \sum_{i=r+1}^N \frac{[\mathbf{U}^T \mathbf{y}]_i^2}{\sigma_\epsilon^2}
 \\
     &- \frac{1}{2} \ln \prod_{i=1}^r (\sigma_0^2 d_i^2 + \sigma_\epsilon^2)
     - \frac{N-r}{2} \ln (\sigma_\epsilon^2)
@@ -486,7 +486,7 @@ function bayesian_linear_regression_svd(X::Matrix{<:AbstractFloat},
     UT_Y[1:length(S)] .*= var_0 .* S ./ (var_0 .* S .* S .+ var_e)
     c = V * UT_Y[1:length(S)]
 
-    res = Dict{String, Any}("c" => c,
+    res = Dict{String, Any}("C" => c,
                             "lml" => lml,
                             "var_0" => var_0,
                             "var_e" => var_e)
