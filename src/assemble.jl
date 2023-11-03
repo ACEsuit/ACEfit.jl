@@ -92,7 +92,6 @@ function assemble_weights(data::AbstractVector{<:AbstractData})
     W = SharedArray(zeros(rows[end][end]))
     @showprogress pmap(packets) do p
         W[p.rows] .= weight_vector(p.data)
-        next!(progress)
         GC.gc()
     end
     return Array(W)
