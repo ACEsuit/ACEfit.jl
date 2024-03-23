@@ -153,7 +153,7 @@ end
 @doc raw"""
 `struct Truncated_SVD` : linear least squares solver
 ```math 
- θ = \arg\min \| A \theta - y \|^2 + \lambda \| P \theta \|^2
+ θ = \arg\min \| A P^{-1} \theta - y \|^2 
 ```
 Constructor
 ```julia
