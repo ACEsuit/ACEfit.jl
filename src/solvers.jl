@@ -151,24 +151,30 @@ end
 # solve(solver::SKLEARN_ARD, ...) is implemented in ext/
 
 @doc raw"""
-`struct Truncated_SVD` : linear least squares solver
+`struct TruncatedSVD` : linear least squares solver for approximately solving 
 ```math 
- θ = \arg\min \| A P^{-1} \theta - y \|^2 
+ θ = \arg\min \| A \theta - y \|^2 
 ```
+- transform  $\tilde\theta  = P \theta$
+- perform svd on $A P^{-1}$
+- truncate svd at `rtol`, i.e. keep only the components for which $\sigma_i \geq {\rm rtol} \max \sigma_i$
+- Compute $\tilde\theta$ from via pseudo-inverse
+- Reverse transformation $\theta = P^{-1} \tilde\theta$
+
 Constructor
 ```julia
-ACEfit.Truncated_SVD(; lambda = 0.0, P = nothing)
+ACEfit.TruncatedSVD(; rtol = 1e-9, P = I)
 ``` 
 where 
 * `rtol` : relative tolerance
 * `P` : right-preconditioner / tychonov operator
 """
-struct Truncated_SVD
+struct TruncatedSVD
     rtol::Number
     P::Any
 end
 
-Truncated_SVD(; rtol = 1e-9, P = I) = Truncated_SVD(rtol, P)
+TruncatedSVD(; rtol = 1e-9, P = I) = TruncatedSVD(rtol, P)
 
 function trunc_svd(USV::SVD, Y, rtol)
     U, S, V = USV # svd(A)
@@ -179,9 +185,13 @@ function trunc_svd(USV::SVD, Y, rtol)
     return V1 * (S1 .\ (U1' * Y))
 end
 
-function solve(solver::Truncated_SVD, A, y)
+function solve(solver::TruncatedSVD, A, y)
     AP = A / solver.P
-    θP = trunc_svd(svd(AP), y, solver.rtol)
+    print("Truncted SVD: perform svd ... ")
+    USV = svd(AP)
+    print("done. truncation ... ")
+    θP = trunc_svd(USV, y, solver.rtol)
+    println("done.")
     return Dict{String, Any}("C" => solver.P \ θP)
 end
 
