@@ -79,3 +79,10 @@ results = ACEfit.solve(solver, A, y)
 C = results["C"]
 @show norm(A * C - y)
 @show norm(C)
+
+@info(" ... Truncated_SVD")
+solver = ACEfit.Truncated_SVD()
+results = ACEfit.solve(solver, A, y)
+C = results["C"]
+@show norm(A * C - y)
+@show norm(C)

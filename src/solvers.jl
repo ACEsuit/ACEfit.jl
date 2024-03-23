@@ -2,6 +2,7 @@ using LinearAlgebra: qr, I, norm
 using LowRankApprox: pqrfact
 using IterativeSolvers
 using .BayesianLinear
+using LinearAlgebra: SVD, svd
 
 @doc raw"""
 `struct QR` : linear least squares solver, using standard QR factorisation; 
@@ -148,3 +149,39 @@ function SKLEARN_ARD(; n_iter = 300, tol = 1e-3, threshold_lambda = 10000)
 end
 
 # solve(solver::SKLEARN_ARD, ...) is implemented in ext/
+
+@doc raw"""
+`struct Truncated_SVD` : linear least squares solver
+```math 
+ θ = \arg\min \| A \theta - y \|^2 + \lambda \| P \theta \|^2
+```
+Constructor
+```julia
+ACEfit.Truncated_SVD(; lambda = 0.0, P = nothing)
+``` 
+where 
+* `rtol` : relative tolerance
+* `P` : right-preconditioner / tychonov operator
+"""
+struct Truncated_SVD
+    rtol::Number
+    P::Any
+end
+
+Truncated_SVD(; rtol = 1e-9, P = I) = Truncated_SVD(rtol, P)
+
+function trunc_svd(USV::SVD, Y, rtol)
+    U, S, V = USV # svd(A)
+    Ikeep = findall(x -> x > rtol, S ./ maximum(S))
+    U1 = @view U[:, Ikeep]
+    S1 = S[Ikeep]
+    V1 = @view V[:, Ikeep]
+    return V1 * (S1 .\ (U1' * Y))
+end
+
+function solve(solver::Truncated_SVD, A, y)
+    AP = A / solver.P
+    θP = trunc_svd(svd(AP), y, solver.rtol)
+    return Dict{String, Any}("C" => solver.P \ θP)
+end
+
