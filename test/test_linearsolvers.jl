@@ -7,7 +7,7 @@ using PythonCall
 Nobs = 10_000
 Nfeat = 100
 A1 = randn(Nobs, Nfeat) / sqrt(Nobs)
-U, S1, V = svd(A)
+U, S1, V = svd(A1)
 S = 1e-4 .+ ((S .- S[end]) / (S[1] - S[end])).^2
 A = U * Diagonal(S) * V'
 c_ref = randn(Nfeat)
