@@ -179,7 +179,7 @@ Perform Bayesian linear regression, possibly with automatic relevance determinat
 
 ### output settings
 - `verbose::Bool = true`
-- `committee_size::Int = 0`: if nonzero, sample from the posterior and include a committee in the results.
+- `committee_size::Int = 0`: if nonzero, sample from the posterior and include a committee in the results (presently, `factorization = :svd` required for committees)
 - `ret_covar::Bool = false`: whether to supply the covariance matrix in the results.
 
 ### solver settings
@@ -203,6 +203,11 @@ function bayesian_linear_regression(A, Y;
                                     optimizer = :LBFGS,
                                     tol::AbstractFloat = 1e-3,
                                     max_iter::Int = 1000)
+
+    if (committee_size>0 && factorization != :svd)
+        error("At present, only the SVD factorization can produce committees.")
+    end
+
     if (ard_threshold == 0.0) && (factorization == :cholesky)
         return bayesian_fit(A, Y;
                             variance_c_floor = sig_0_floor * sig_0_floor,
