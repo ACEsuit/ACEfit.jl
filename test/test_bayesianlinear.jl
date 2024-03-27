@@ -1,4 +1,5 @@
 using ACEfit
+using ACEfit.BayesianLinear
 using LinearAlgebra
 using Test
 
@@ -23,3 +24,6 @@ for n in 1:committee_size
 end
 covar_approx .= covar_approx / committee_size
 @test maximum(abs.(covar_approx - covar)) < 0.01
+
+@info("Test error from invalid committee request.")
+@test_throws ErrorException("At present, only the SVD factorization can produce committees.") BayesianLinear.bayesian_linear_regression(X, Y; committee_size=committee_size, factorization=:cholesky)
