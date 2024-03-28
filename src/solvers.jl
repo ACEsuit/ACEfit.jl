@@ -2,6 +2,7 @@ using LinearAlgebra: qr, I, norm
 using LowRankApprox: pqrfact
 using IterativeSolvers
 using .BayesianLinear
+using LinearAlgebra: SVD, svd
 
 @doc raw"""
 `struct QR` : linear least squares solver, using standard QR factorisation; 
@@ -148,3 +149,49 @@ function SKLEARN_ARD(; n_iter = 300, tol = 1e-3, threshold_lambda = 10000)
 end
 
 # solve(solver::SKLEARN_ARD, ...) is implemented in ext/
+
+@doc raw"""
+`struct TruncatedSVD` : linear least squares solver for approximately solving 
+```math 
+ θ = \arg\min \| A \theta - y \|^2 
+```
+- transform  $\tilde\theta  = P \theta$
+- perform svd on $A P^{-1}$
+- truncate svd at `rtol`, i.e. keep only the components for which $\sigma_i \geq {\rm rtol} \max \sigma_i$
+- Compute $\tilde\theta$ from via pseudo-inverse
+- Reverse transformation $\theta = P^{-1} \tilde\theta$
+
+Constructor
+```julia
+ACEfit.TruncatedSVD(; rtol = 1e-9, P = I)
+``` 
+where 
+* `rtol` : relative tolerance
+* `P` : right-preconditioner / tychonov operator
+"""
+struct TruncatedSVD
+    rtol::Number
+    P::Any
+end
+
+TruncatedSVD(; rtol = 1e-9, P = I) = TruncatedSVD(rtol, P)
+
+function trunc_svd(USV::SVD, Y, rtol)
+    U, S, V = USV # svd(A)
+    Ikeep = findall(x -> x > rtol, S ./ maximum(S))
+    U1 = @view U[:, Ikeep]
+    S1 = S[Ikeep]
+    V1 = @view V[:, Ikeep]
+    return V1 * (S1 .\ (U1' * Y))
+end
+
+function solve(solver::TruncatedSVD, A, y)
+    AP = A / solver.P
+    print("Truncted SVD: perform svd ... ")
+    USV = svd(AP)
+    print("done. truncation ... ")
+    θP = trunc_svd(USV, y, solver.rtol)
+    println("done.")
+    return Dict{String, Any}("C" => solver.P \ θP)
+end
+
