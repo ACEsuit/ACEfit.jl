@@ -32,7 +32,7 @@ C = results["C"]
 @info(" ... MLJ SKLearn ARD")
 ARDRegressor = @load ARDRegressor pkg=MLJScikitLearnInterface
 solver = ARDRegressor(
-    n_iter = 300,
+    max_iter = 300,
     tol = 1e-3,
     threshold_lambda = 10000
 )

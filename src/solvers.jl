@@ -124,12 +124,12 @@ SKLEARN_BRR
 """
 struct SKLEARN_BRR
     tol::Number
-    n_iter::Integer
+    max_iter::Integer
 end
 
-function SKLEARN_BRR(; tol = 1e-3, n_iter = 300)
+function SKLEARN_BRR(; tol = 1e-3, max_iter = 300)
     @warn "SKLearn will transition to MLJ in future, please upgrade your script to reflect this."
-    SKLEARN_BRR(tol, n_iter)
+    SKLEARN_BRR(tol, max_iter)
 end
 
 # solve(solver::SKLEARN_BRR, ...) is implemented in ext/
@@ -138,14 +138,14 @@ end
 SKLEARN_ARD
 """
 struct SKLEARN_ARD
-    n_iter::Integer
+    max_iter::Integer
     tol::Number
     threshold_lambda::Number
 end
 
-function SKLEARN_ARD(; n_iter = 300, tol = 1e-3, threshold_lambda = 10000)
+function SKLEARN_ARD(; max_iter = 300, tol = 1e-3, threshold_lambda = 10000)
     @warn "SKLearn will transition to MLJ in future, please upgrade your script to reflect this."
-    SKLEARN_ARD(n_iter, tol, threshold_lambda)
+    SKLEARN_ARD(max_iter, tol, threshold_lambda)
 end
 
 # solve(solver::SKLEARN_ARD, ...) is implemented in ext/
