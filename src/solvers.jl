@@ -3,6 +3,7 @@ using LowRankApprox: pqrfact
 using IterativeSolvers
 using .BayesianLinear
 using LinearAlgebra: SVD, svd
+using ActiveSetPursuit
 
 @doc raw"""
 `struct QR` : linear least squares solver, using standard QR factorisation; 
