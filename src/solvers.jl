@@ -195,3 +195,47 @@ function solve(solver::TruncatedSVD, A, y)
     return Dict{String, Any}("C" => solver.P \ θP)
 end
 
+
+@doc raw"""
+`struct ASP` : Active Set Pursuit sparse solver
+    solves the following optimization problem using the homotopy approach:
+
+    ```math 
+    \max_{y} \left( b^T y - \frac{1}{2} λ y^T y \right)
+    ```
+        subject to
+        
+    ```math
+        \|A^T y\|_{\infty} \leq 1.
+    ```
+
+    * Input
+    * `A` : `m`-by-`n` explicit matrix or linear operator.
+    * `b` : `m`-vector.
+    * `min_lambda` : Minimum value for `λ`. Is set to zero if not input is given.
+    * `loglevel` : Logging level.
+    * `itnMax` : Maximum number of iterations.
+    * `feaTol` : Feasibility tolerance.
+    * `actMax` : Maximum number of active constraints.
+
+    Constructor
+    ```julia
+    ACEfit.ASP(; P = I)
+    ``` 
+    where 
+    * `P` : right-preconditioner / tychonov operator
+"""
+struct ASP
+    P::Any
+end
+
+ASP(; P = I) = ASP(P)
+
+function solve(solver::ASP, A, y; kwargs...)
+    AP = A / solver.P
+    tracer = asp_homotopy(AP, y; loglevel=0, kwargs...)
+    xs = tracer[end][1]
+    x_f = solver.P \ Array(xs)
+    println("done.")
+    return Dict{String, Any}("C" => x_f)
+end
