@@ -115,6 +115,8 @@ C = results["C"]
 solver = ACEfit.ASP(P = P)
 results = ACEfit.solve(solver, A, y)
 C = results["C"]
+full_path = results["tracer"]
 @show norm(A * C - y)
 @show norm(C)
 @show norm(C - c_ref)
+

@@ -234,9 +234,9 @@ ASP(; P = I) = ASP(P)
 
 function solve(solver::ASP, A, y; kwargs...)
     AP = A / solver.P
-    tracer = asp_homotopy(AP, y; loglevel=0, kwargs...)
+    tracer = asp_homotopy(AP, y; loglevel=0, traceFlag=true, kwargs...)
     xs = tracer[end][1]
     x_f = solver.P \ Array(xs)
     println("done.")
-    return Dict{String, Any}("C" => x_f)
+    return Dict{String, Any}("C" => x_f, "tracer" =>tracer)
 end
