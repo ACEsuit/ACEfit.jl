@@ -213,30 +213,72 @@ end
     * Input
     * `A` : `m`-by-`n` explicit matrix or linear operator.
     * `b` : `m`-vector.
-    * `min_lambda` : Minimum value for `λ`. Is set to zero if not input is given.
+
+    * Solver parameters
+    * `min_lambda` : Minimum value for `λ`. Defaults to zero if not provided.
     * `loglevel` : Logging level.
     * `itnMax` : Maximum number of iterations.
-    * `feaTol` : Feasibility tolerance.
     * `actMax` : Maximum number of active constraints.
 
     Constructor
     ```julia
-    ACEfit.ASP(; P = I)
+    ACEfit.ASP(; P = I, select, params)
     ``` 
     where 
-    * `P` : right-preconditioner / tychonov operator
+    - `P` : right-preconditioner / tychonov operator
+    - `select`: Selection mode for the final solution.
+    - `(:byerror, th)`: Selects the smallest active set fit within a factor `th` of the smallest fit error.
+    - `(:final, nothing)`: Returns the final iterate.
+    - `params`: The solver parameters, passed as named arguments.
 """
 struct ASP
     P::Any
+    select::Tuple
+    params::NamedTuple
 end
 
-ASP(; P = I) = ASP(P)
+function ASP(; P = I, select, params...)
+    params_tuple = NamedTuple(params)
+    return ASP(P, select, params_tuple)
+end
 
-function solve(solver::ASP, A, y; kwargs...)
+function solve(solver::ASP, A, y)
+    # Apply preconditioning
     AP = A / solver.P
-    tracer = asp_homotopy(AP, y; loglevel=0, traceFlag=true, kwargs...)
-    xs = tracer[end][1]
-    x_f = solver.P \ Array(xs)
+    
+    tracer = asp_homotopy(AP, y; solver.params[1]...)
+    
+    new_tracer = Vector{typeof(tracer[1])}(undef, length(tracer))
+    for i in 1:length(tracer)
+        new_tracer[i] = (solver.P \ Array(tracer[i][1]), tracer[i][2])
+    end
+
+    # Select the final solution based on the criterion
+    xs, in = select_solution(new_tracer, solver, A, y)
+    x_f = Array(xs)
+    
     println("done.")
-    return Dict{String, Any}("C" => x_f, "tracer" =>tracer)
+    return Dict("C" => x_f, "tracer" => new_tracer, "nnzs" => length((tracer[in][1]).nzind) )
 end
+
+function select_solution(tracer, solver, A, y)
+    criterion, threshold = solver.select
+    
+    if criterion == :final
+        return tracer[end][1], length(tracer)
+
+    elseif criterion == :byerror
+        errors = [norm(A * t[1] - y) for t in tracer]
+        min_error = minimum(errors)
+        
+        # Find the solution with the smallest error within the threshold
+        for (i, error) in enumerate(errors)
+            if error <= threshold * min_error
+                return tracer[i][1], i
+            end
+        end
+    else
+        @error("Unknown selection criterion: $criterion")
+    end
+end
+
