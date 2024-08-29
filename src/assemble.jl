@@ -4,7 +4,7 @@ using ProgressMeter
 using SharedArrays
 
 """
-    length_basis(model)
+    basis_size(model)
 
 Return the length of the basis, assuming that `model` is a linear model, or 
 when interpreted as a linear model. The returned integer must match the 
@@ -12,7 +12,7 @@ size of the feature matrix that will be assembled for the given model.
 
 It defaults to `Base.length` but can be overloaded if needed.  
 """
-length_basis(model) = Base.length(model) 
+basis_size(model) = Base.length(model) 
 
 struct DataPacket{T <: AbstractData}
     rows::UnitRange
@@ -34,8 +34,8 @@ function assemble(data::AbstractVector{<:AbstractData}, basis)
     packets = DataPacket.(rows, data)
     sort!(packets, by = length, rev = true)
     (nprocs() > 1) && sendto(workers(), basis = basis)
-    @info "  - Creating feature matrix with size ($(rows[end][end]), $(length_basis(basis)))."
-    A = SharedArray(zeros(rows[end][end], length_basis(basis)))
+    @info "  - Creating feature matrix with size ($(rows[end][end]), $(basis_size(basis)))."
+    A = SharedArray(zeros(rows[end][end], basis_size(basis)))
     Y = SharedArray(zeros(size(A, 1)))
     @info "  - Beginning assembly with processor count:  $(nprocs())."
     @showprogress pmap(packets) do p
