@@ -1,7 +1,7 @@
 name = "ACEfit"
 uuid = "ad31a8ef-59f5-4a01-b543-a85c2f73e95c"
 authors = ["William C Witt <witt.chuck@gmail.com>, Christoph Ortner <christophortner0@gmail.com> and contributors"]
-version = "0.2.1"
+version = "0.2.2"
 
 [deps]
 ActiveSetPursuit = "d86c1dc8-ba26-4c98-b330-3a8efc174d20"
@@ -27,6 +27,7 @@ ACEfit_MLJScikitLearnInterface_ext = ["MLJScikitLearnInterface", "PythonCall", "
 ACEfit_PythonCall_ext = "PythonCall"
 
 [compat]
+ActiveSetPursuit = "0.0.2"
 IterativeSolvers = "0.9.2"
 LowRankApprox = "0.5.3"
 MLJ = "0.19"
