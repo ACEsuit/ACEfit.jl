@@ -111,3 +111,32 @@ C = results["C"]
 @show norm(C)
 @show norm(C - c_ref)
 
+@info(" ... ASP_homotopy selected by error")
+solver = ACEfit.ASP(P = P, select = (:byerror,1.5), params = (loglevel=0, traceFlag=true))
+results = ACEfit.solve(solver, A, y)
+C = results["C"]
+full_path = results["path"]
+@show results["nnzs"]
+@show norm(A * C - y)
+@show norm(C)
+@show norm(C - c_ref)
+
+@info(" ... ASP_homotopy selected by size")
+solver = ACEfit.ASP(P = P, select = (:bysize,50), params = (loglevel=0, traceFlag=true))
+results = ACEfit.solve(solver, A, y)
+C = results["C"]
+full_path = results["path"]
+@show results["nnzs"]
+@show norm(A * C - y)
+@show norm(C)
+@show norm(C - c_ref)
+
+@info(" ... ASP_homotopy final solution")
+solver = ACEfit.ASP(P = P, select = (:final,nothing), params = (loglevel=0, traceFlag=true))
+results = ACEfit.solve(solver, A, y)
+C = results["C"]
+full_path = results["path"]
+@show results["nnzs"]
+@show norm(A * C - y)
+@show norm(C)
+@show norm(C - c_ref)

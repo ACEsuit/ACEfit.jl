@@ -3,6 +3,7 @@ using LowRankApprox: pqrfact
 using IterativeSolvers
 using .BayesianLinear
 using LinearAlgebra: SVD, svd
+using ActiveSetPursuit
 
 @doc raw"""
 `struct QR` : linear least squares solver, using standard QR factorisation; 
@@ -193,5 +194,97 @@ function solve(solver::TruncatedSVD, A, y)
     θP = trunc_svd(USV, y, solver.rtol)
     println("done.")
     return Dict{String, Any}("C" => solver.P \ θP)
+end
+
+
+@doc raw"""
+`struct ASP` : Active Set Pursuit sparse solver
+    solves the following optimization problem using the homotopy approach:
+
+    ```math 
+    \max_{y} \left( b^T y - \frac{1}{2} λ y^T y \right)
+    ```
+        subject to
+        
+    ```math
+        \|A^T y\|_{\infty} \leq 1.
+    ```
+
+    * Input
+    * `A` : `m`-by-`n` explicit matrix or linear operator.
+    * `b` : `m`-vector.
+
+    * Solver parameters
+    * `min_lambda` : Minimum value for `λ`. Defaults to zero if not provided.
+    * `loglevel` : Logging level.
+    * `itnMax` : Maximum number of iterations.
+    * `actMax` : Maximum number of active constraints.
+
+    Constructor
+    ```julia
+    ACEfit.ASP(; P = I, select, params)
+    ``` 
+    where 
+    - `P` : right-preconditioner / tychonov operator
+    - `select`: Selection mode for the final solution.
+    - `(:byerror, th)`: Selects the smallest active set fit within a factor `th` of the smallest fit error.
+    - `(:final, nothing)`: Returns the final iterate.
+    - `params`: The solver parameters, passed as named arguments.
+"""
+struct ASP
+    P::Any
+    select::Tuple
+    params::NamedTuple
+end
+
+function ASP(; P = I, select, params...)
+    params_tuple = NamedTuple(params)
+    return ASP(P, select, params_tuple)
+end
+
+function solve(solver::ASP, A, y)
+    # Apply preconditioning
+    AP = A / solver.P
+    
+    tracer = asp_homotopy(AP, y; solver.params[1]...)
+    
+    new_tracer = Vector{NamedTuple{(:solution, :λ), Tuple{Any, Any}}}(undef, length(tracer))
+
+    for i in 1:length(tracer)
+        new_tracer[i] = (solution = solver.P \ tracer[i][1], λ = tracer[i][2])
+    end
+
+    # Select the final solution based on the criterion
+    xs, in = select_solution(new_tracer, solver, A, y)
+    
+    println("done.")
+    return Dict("C" => xs, "path" => new_tracer, "nnzs" => length((tracer[in][1]).nzind) )
+end
+
+function select_solution(tracer, solver, A, y)
+    criterion, threshold = solver.select
+    
+    if criterion == :final
+        return tracer[end][1], length(tracer)
+
+    elseif criterion == :byerror
+        errors = [norm(A * t[1] - y) for t in tracer]
+        min_error = minimum(errors)
+        
+        # Find the solution with the smallest error within the threshold
+        for (i, error) in enumerate(errors)
+            if error <= threshold * min_error
+                return tracer[i][1], i
+            end
+        end
+    elseif criterion == :bysize
+        for i in 1:length(tracer)
+            if length((tracer[i][1]).nzind) == threshold
+                return tracer[i][1], i
+            end
+        end
+    else
+        @error("Unknown selection criterion: $criterion")
+    end
 end
 
