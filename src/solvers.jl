@@ -256,10 +256,9 @@ function solve(solver::ASP, A, y)
 
     # Select the final solution based on the criterion
     xs, in = select_solution(new_tracer, solver, A, y)
-    x_f = Array(xs)
     
     println("done.")
-    return Dict("C" => x_f, "path" => new_tracer, "nnzs" => length((tracer[in][1]).nzind) )
+    return Dict("C" => xs, "path" => new_tracer, "nnzs" => length((tracer[in][1]).nzind) )
 end
 
 function select_solution(tracer, solver, A, y)
