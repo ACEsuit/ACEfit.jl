@@ -248,9 +248,10 @@ function solve(solver::ASP, A, y)
     
     tracer = asp_homotopy(AP, y; solver.params[1]...)
     
-    new_tracer = Vector{typeof(tracer[1])}(undef, length(tracer))
+    new_tracer = Vector{NamedTuple{(:solution, :λ), Tuple{Any, Any}}}(undef, length(tracer))
+
     for i in 1:length(tracer)
-        new_tracer[i] = (solver.P \ Array(tracer[i][1]), tracer[i][2])
+        new_tracer[i] = (solution = solver.P \ tracer[i][1], λ = tracer[i][2])
     end
 
     # Select the final solution based on the criterion
@@ -258,7 +259,7 @@ function solve(solver::ASP, A, y)
     x_f = Array(xs)
     
     println("done.")
-    return Dict("C" => x_f, "tracer" => new_tracer, "nnzs" => length((tracer[in][1]).nzind) )
+    return Dict("C" => x_f, "path" => new_tracer, "nnzs" => length((tracer[in][1]).nzind) )
 end
 
 function select_solution(tracer, solver, A, y)
@@ -274,6 +275,12 @@ function select_solution(tracer, solver, A, y)
         # Find the solution with the smallest error within the threshold
         for (i, error) in enumerate(errors)
             if error <= threshold * min_error
+                return tracer[i][1], i
+            end
+        end
+    elseif criterion == :bysize
+        for i in 1:length(tracer)
+            if length((tracer[i][1]).nzind) == threshold
                 return tracer[i][1], i
             end
         end
