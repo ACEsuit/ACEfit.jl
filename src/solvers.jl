@@ -223,7 +223,7 @@ end
 
     Constructor
     ```julia
-    ACEfit.ASPCombined(; P = I, select, mode, params)
+    ACEfit.ASP(; P = I, select, mode, params)
     ``` 
     where 
     - `P` : right-preconditioner / tychonov operator
