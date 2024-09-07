@@ -1,6 +1,7 @@
 
 using ACEfit
 using LinearAlgebra
+using Random
 using PythonCall
 
 @info("Test Solver on overdetermined system")
@@ -111,32 +112,34 @@ C = results["C"]
 @show norm(C)
 @show norm(C - c_ref)
 
-@info(" ... ASP_homotopy selected by error")
-solver = ACEfit.ASP(P = P, select = (:byerror,1.5), params = (loglevel=0, traceFlag=true))
-results = ACEfit.solve(solver, A, y)
-C = results["C"]
-full_path = results["path"]
-@show results["nnzs"]
-@show norm(A * C - y)
-@show norm(C)
-@show norm(C - c_ref)
 
-@info(" ... ASP_homotopy selected by size")
-solver = ACEfit.ASP(P = P, select = (:bysize,50), params = (loglevel=0, traceFlag=true))
-results = ACEfit.solve(solver, A, y)
-C = results["C"]
-full_path = results["path"]
-@show results["nnzs"]
-@show norm(A * C - y)
-@show norm(C)
-@show norm(C - c_ref)
+@info(" ... ASP")
+shuffled_indices = shuffle(1:length(y))
+train_indices = shuffled_indices[1:round(Int, 0.85 * length(y))]
+val_indices = shuffled_indices[round(Int, 0.85 * length(y)) + 1:end]
+At = A[train_indices,:]
+Av = A[val_indices,:]
+yt = y[train_indices]
+yv = y[val_indices]
 
-@info(" ... ASP_homotopy final solution")
-solver = ACEfit.ASP(P = P, select = (:final,nothing), params = (loglevel=0, traceFlag=true))
-results = ACEfit.solve(solver, A, y)
-C = results["C"]
-full_path = results["path"]
-@show results["nnzs"]
-@show norm(A * C - y)
-@show norm(C)
-@show norm(C - c_ref)
+for (sel, mod) in [((:final,nothing),:basic ),( (:byerror,1.3),:basic ),((:bysize,73),:basic )
+    ,((:val,nothing),:smart ),((:byerror,1.3),:smart ),((:bysize,73),:smart )]
+    solver = ACEfit.ASP(P=I, select= sel, mode=mod ,params = (loglevel=0, traceFlag=true))
+    if mod == :basic
+        results = ACEfit.solve(solver, A, y)
+        C = results["C"]
+        full_path = results["path"]
+        @show results["nnzs"]
+        @show norm(A * C - y)
+        @show norm(C)
+        @show norm(C - c_ref)
+    elseif mod == :smart
+        results = ACEfit.solve(solver, At, yt, Av, yv)
+        C = results["C"]
+        full_path = results["path"]
+        @show results["nnzs"]
+        @show norm(Av * C - yv)
+        @show norm(C)
+        @show norm(C - c_ref)
+    end
+end
