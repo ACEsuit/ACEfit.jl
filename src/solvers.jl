@@ -198,89 +198,86 @@ end
 
 
 @doc raw"""
-`struct ASP` : Active Set Pursuit sparse solver
-    solves the following optimization problem using the homotopy approach:
-
-    ```math 
-    \max_{y} \left( b^T y - \frac{1}{2} λ y^T y \right)
-    ```
-        subject to
-        
-    ```math
-        \|A^T y\|_{\infty} \leq 1.
-    ```
+`struct ASP` : Active Set Pursuit solver
+    solves the optimization problem using either the basic or smart homotopy approach.
 
     * Input
-    * `A` : `m`-by-`n` explicit matrix or linear operator.
+    * `A` : `m`-by-`n` matrix.
     * `b` : `m`-vector.
+    * `Aval` : `p`-by-`n` validation matrix (only for smart mode).
+    * `bval` : `p`- validation vector (only for smart mode).
 
     * Solver parameters
     * `min_lambda` : Minimum value for `λ`. Defaults to zero if not provided.
     * `loglevel` : Logging level.
     * `itnMax` : Maximum number of iterations.
     * `actMax` : Maximum number of active constraints.
+    * `mode` : Either `:basic` or `:smart`.
 
     Constructor
     ```julia
-    ACEfit.ASP(; P = I, select, params)
+    ACEfit.ASPCombined(; P = I, select, mode, params)
     ``` 
     where 
     - `P` : right-preconditioner / tychonov operator
     - `select`: Selection mode for the final solution.
-    - `(:byerror, th)`: Selects the smallest active set fit within a factor `th` of the smallest fit error.
-    - `(:final, nothing)`: Returns the final iterate.
     - `params`: The solver parameters, passed as named arguments.
 """
 struct ASP
     P::Any
     select::Tuple
+    mode::Symbol
     params::NamedTuple
 end
 
-function ASP(; P = I, select, params...)
+function ASP(; P = I, select, mode=:basic, params...)
     params_tuple = NamedTuple(params)
-    return ASP(P, select, params_tuple)
+    return ASP(P, select, mode, params_tuple)
 end
 
-function solve(solver::ASP, A, y)
+function solve(solver::ASP, A, y, Aval=nothing, yval=nothing)
     # Apply preconditioning
     AP = A / solver.P
     
     tracer = asp_homotopy(AP, y; solver.params[1]...)
-    
-    new_tracer = Vector{NamedTuple{(:solution, :λ), Tuple{Any, Any}}}(undef, length(tracer))
+    q = length(tracer)
+    new_tracer = Vector{NamedTuple{(:solution, :λ), Tuple{Any, Any}}}(undef, q)
 
-    for i in 1:length(tracer)
+    for i in 1:q
         new_tracer[i] = (solution = solver.P \ tracer[i][1], λ = tracer[i][2])
     end
 
-    # Select the final solution based on the criterion
-    xs, in = select_solution(new_tracer, solver, A, y)
-    
+    if solver.mode == :basic
+        xs, in = select_solution(new_tracer, solver, A, y)
+    elseif solver.mode == :smart
+        xs, in = select_smart(new_tracer, solver, Aval, yval)
+    else
+        @error("Unknown mode: $solver.mode")
+    end
+
     println("done.")
-    return Dict("C" => xs, "path" => new_tracer, "nnzs" => length((tracer[in][1]).nzind) )
+    return Dict("C" => xs, "path" => new_tracer, "nnzs" => length((new_tracer[in][:solution]).nzind) )
 end
 
 function select_solution(tracer, solver, A, y)
     criterion, threshold = solver.select
     
     if criterion == :final
-        return tracer[end][1], length(tracer)
+        return tracer[end][:solution], length(tracer)
 
     elseif criterion == :byerror
-        errors = [norm(A * t[1] - y) for t in tracer]
+        errors = [norm(A * t[:solution] - y) for t in tracer]
         min_error = minimum(errors)
         
-        # Find the solution with the smallest error within the threshold
         for (i, error) in enumerate(errors)
             if error <= threshold * min_error
-                return tracer[i][1], i
+                return tracer[i][:solution], i
             end
         end
     elseif criterion == :bysize
         for i in 1:length(tracer)
-            if length((tracer[i][1]).nzind) == threshold
-                return tracer[i][1], i
+            if length((tracer[i][:solution]).nzind) == threshold
+                return tracer[i][:solution], i
             end
         end
     else
@@ -288,3 +285,43 @@ function select_solution(tracer, solver, A, y)
     end
 end
 
+
+function select_smart(tracer, solver, Aval,yval)
+
+    best_metric = Inf
+    best_iteration = 0
+    validation_metric = 0
+    q = length(tracer)
+    errors = [norm(Aval * t[:solution] - yval) for t in tracer]
+    nnzss = [(t[:solution]).nzind for t in tracer]
+    best_iteration = argmin(errors)
+    validation_metric = errors[best_iteration]
+    validation_end = norm(Aval * tracer[end][:solution] - yval)
+
+    if validation_end < validation_metric #make sure to check the last one too in case q<<100
+        best_iteration = q
+    end
+
+    criterion, threshold = solver.select
+    
+    if criterion == :val
+        return tracer[best_iteration][:solution], best_iteration
+
+    elseif criterion == :byerror
+        for (i, error) in enumerate(errors)
+            if error <= threshold * validation_metric
+                return tracer[i][:solution], i
+            end
+        end
+
+    elseif criterion == :bysize
+        first_index = findfirst(sublist -> threshold in sublist, nnzss)
+        relevant_errors = errors[1:first_index - 1] 
+        min_error = minimum(relevant_errors)
+        min_error_index = findfirst(==(min_error), relevant_errors)
+        return tracer[min_error_index][:solution], min_error_index
+
+    else
+        @error("Unknown selection criterion: $criterion")
+    end
+end
