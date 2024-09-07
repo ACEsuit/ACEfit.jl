@@ -200,7 +200,14 @@ end
 @doc raw"""
 `struct ASP` : Active Set Pursuit solver
     solves the optimization problem using either the basic or smart homotopy approach.
-
+    ```math 
+    \max_{y} \left( b^T y - \frac{1}{2} λ y^T y \right)
+    ```
+        subject to
+        
+    ```math
+        \|A^T y\|_{\infty} \leq 1.
+    ```
     * Input
     * `A` : `m`-by-`n` matrix.
     * `b` : `m`-vector.
