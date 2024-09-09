@@ -8,7 +8,7 @@ using Random
 
 Random.seed!(1234)
 Nobs = 10_000
-Nfeat = 300
+Nfeat = 100
 A1 = randn(Nobs, Nfeat) / sqrt(Nobs)
 U, S1, V = svd(A1)
 S = 1e-4 .+ ((S1 .- S1[end]) / (S1[1] - S1[end])).^2
@@ -108,56 +108,4 @@ for (select, tolr, tolc) in [ (:final, 20*epsn, 1.5),
       @warn "tsvd did NOT make any improvements!"
    end
 end
-
-
-##
-
-# Experimental Implementation of tsvd postprocessing 
-
-
-# using SparseArrays
-
-# function solve_tsvd(At, yt, Av, yv) 
-#    Ut, Σt, Vt = svd(At); zt = Ut' * yt
-#    Qv, Rv = qr(Av); zv = Matrix(Qv)' * yv
-#    @assert issorted(Σt, rev=true)
-
-#    Rv_Vt = Rv * Vt
-
-#    θv = zeros(size(Av, 2))
-#    θv[1] = zt[1] / Σt[1] 
-#    rv = Rv_Vt[:, 1] * θv[1] - zv 
-
-#    tsvd_errs = Float64[] 
-#    push!(tsvd_errs, norm(rv))
-
-#    for k = 2:length(Σt)
-#       θv[k] = zt[k] / Σt[k]
-#       rv += Rv_Vt[:, k] * θv[k]
-#       push!(tsvd_errs, norm(rv))
-#    end
-
-#    imin = argmin(tsvd_errs)
-#    θv[imin+1:end] .= 0
-#    return Vt * θv, Σt[imin]
-# end
-
-# function post_asp_tsvd(path, At, yt, Av, yv) 
-#    Qt, Rt = qr(At); zt = Matrix(Qt)' * yt
-#    Qv, Rv = qr(Av); zv = Matrix(Qv)' * yv
-
-#    post = [] 
-#    for (θ, λ) in path
-#       if isempty(θ.nzind); push!(post, (θ = θ, λ = λ, σ = Inf)); continue; end  
-#       inz = θ.nzind 
-#       θ1, σ = solve_tsvd(Rt[:, inz], zt, Rv[:, inz], zv)
-#       θ2 = copy(θ); θ2[inz] .= θ1
-#       push!(post, (θ = θ2, λ = λ, σ = σ))
-#    end 
-#    return identity.(post)
-# end   
-
-# solver = ACEfit.ASP(P=I, select = :final, loglevel=0, traceFlag=true)
-# result = ACEfit.solve(solver, At, yt); 
-# post = post_asp_tsvd(result["path"], At, yt, Av, yv);
 

@@ -69,24 +69,24 @@ function solve(solver::ASP, A, y, Aval=A, yval=y)
     
     tracer = asp_homotopy(AP, y; solver.params...)
 
-    q = length(tracer)
-    every = max(1, q ÷ solver.nstore)  
-    new_tracer = Vector{NamedTuple{(:solution, :λ), Tuple{Any, Any}}}(undef, q)
-    new_tracer = [(solution = solver.P \ tracer[i][1], λ = tracer[i][2]) for i in [1:every:q; q]]
+    q = length(tracer) 
+    every = max(1, q ÷ solver.nstore)
+    istore = unique([1:every:q; q])
+    new_tracer = [ (solution = solver.P \ tracer[i][1], λ = tracer[i][2], σ = 0.0 ) 
+                   for i in istore ]
 
     if solver.tsvd  # Post-processing if tsvd is true
         post = post_asp_tsvd(new_tracer, A, y, Aval, yval)
-        new_post = [(solution = p.θ, λ = p.λ) for p in post]
+        new_post = [ (solution = p.θ, λ = p.λ, σ = p.σ) for p in post ]
     else
         new_post = new_tracer 
     end
 
     xs, in = select_solution(new_post, solver, Aval, yval)
 
-   #  println("done.")
     return Dict( "C" => xs, 
                 "path" => new_post, 
-                "nnzs" => length((new_tracer[in][:solution]).nzind) )
+                "nnzs" => length( (new_tracer[in][:solution]).nzind) )
 end
 
 
@@ -156,13 +156,24 @@ function post_asp_tsvd(path, At, yt, Av, yv)
    Qt, Rt = qr(At); zt = Matrix(Qt)' * yt
    Qv, Rv = qr(Av); zv = Matrix(Qv)' * yv
 
-   post = [] 
-   for (θ, λ) in path
-      if isempty(θ.nzind); push!(post, (θ = θ, λ = λ, σ = Inf)); continue; end  
+   function _post(θλ)
+      (θ, λ) = θλ
+      if isempty(θ.nzind); return (θ = θ, λ = λ, σ = Inf); end  
       inz = θ.nzind 
       θ1, σ = solve_tsvd(Rt[:, inz], zt, Rv[:, inz], zv)
       θ2 = copy(θ); θ2[inz] .= θ1
-      push!(post, (θ = θ2, λ = λ, σ = σ))
-   end 
-   return identity.(post)
+      return (θ = θ2, λ = λ, σ = σ)
+   end
+
+   return _post.(path)
+
+#    post = [] 
+#    for (θ, λ) in path
+#       if isempty(θ.nzind); push!(post, (θ = θ, λ = λ, σ = Inf)); continue; end  
+#       inz = θ.nzind 
+#       θ1, σ = solve_tsvd(Rt[:, inz], zt, Rv[:, inz], zv)
+#       θ2 = copy(θ); θ2[inz] .= θ1
+#       push!(post, (θ = θ2, λ = λ, σ = σ))
+#    end 
+#    return identity.(post)
 end
