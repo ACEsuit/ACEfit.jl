@@ -48,15 +48,19 @@ solve(solver::ASP, A, y, Aval=A, yval=y)
 If independent `Aval` and `yval` are provided (instead of detaults `A, y`), 
 then the solver will use this separate validation set instead of the training
 set to select the best solution along the model path. 
-"""
+# """
+
 struct ASP
     P
     select
+    mode::Symbol
+    tsvd::Bool
+    nstore::Integer
     params
 end
 
-function ASP(; P = I, select, mode=:train, params...)
-    return ASP(P, select, params)
+function ASP(; P = I, select, mode=:train, tsvd=false, nstore=100, params...)
+    return ASP(P, select, mode, tsvd, nstore, params)
 end
 
 function solve(solver::ASP, A, y, Aval=A, yval=y)
@@ -64,18 +68,24 @@ function solve(solver::ASP, A, y, Aval=A, yval=y)
     AP = A / solver.P
     
     tracer = asp_homotopy(AP, y; solver.params...)
-    q = length(tracer)
-    new_tracer = Vector{NamedTuple{(:solution, :λ), Tuple{Any, Any}}}(undef, q)
 
-    for i in 1:q
-        new_tracer[i] = (solution = solver.P \ tracer[i][1], λ = tracer[i][2])
+    q = length(tracer)
+    every = max(1, q ÷ solver.nstore)  
+    new_tracer = Vector{NamedTuple{(:solution, :λ), Tuple{Any, Any}}}(undef, q)
+    new_tracer = [(solution = solver.P \ tracer[i][1], λ = tracer[i][2]) for i in [1:every:q; q]]
+
+    if solver.tsvd  # Post-processing if tsvd is true
+        post = post_asp_tsvd(new_tracer, A, y, Aval, yval)
+        new_post = [(solution = p.θ, λ = p.λ) for p in post]
+    else
+        new_post = new_tracer 
     end
 
-    xs, in = select_solution(new_tracer, solver, Aval, yval)
+    xs, in = select_solution(new_post, solver, Aval, yval)
 
    #  println("done.")
-    return Dict(   "C" => xs, 
-                "path" => new_tracer, 
+    return Dict( "C" => xs, 
+                "path" => new_post, 
                 "nnzs" => length((new_tracer[in][:solution]).nzind) )
 end
 
@@ -114,44 +124,45 @@ function select_solution(tracer, solver, A, y)
 end
 
 
-#=
-function select_smart(tracer, solver, Aval, yval)
 
-    best_metric = Inf
-    best_iteration = 0
-    validation_metric = 0
-    q = length(tracer)
-    errors = [norm(Aval * t[:solution] - yval) for t in tracer]
-    nnzss = [(t[:solution]).nzind for t in tracer]
-    best_iteration = argmin(errors)
-    validation_metric = errors[best_iteration]
-    validation_end = norm(Aval * tracer[end][:solution] - yval)
+using SparseArrays
 
-    if validation_end < validation_metric #make sure to check the last one too in case q<<100
-        best_iteration = q
-    end
+function solve_tsvd(At, yt, Av, yv) 
+   Ut, Σt, Vt = svd(At); zt = Ut' * yt
+   Qv, Rv = qr(Av); zv = Matrix(Qv)' * yv
+   @assert issorted(Σt, rev=true)
 
-    criterion, threshold = solver.select
-    
-    if criterion == :val
-        return tracer[best_iteration][:solution], best_iteration
+   Rv_Vt = Rv * Vt
 
-    elseif criterion == :byerror
-        for (i, error) in enumerate(errors)
-            if error <= threshold * validation_metric
-                return tracer[i][:solution], i
-            end
-        end
+   θv = zeros(size(Av, 2))
+   θv[1] = zt[1] / Σt[1] 
+   rv = Rv_Vt[:, 1] * θv[1] - zv 
 
-    elseif criterion == :bysize
-        first_index = findfirst(sublist -> threshold in sublist, nnzss)
-        relevant_errors = errors[1:first_index - 1] 
-        min_error = minimum(relevant_errors)
-        min_error_index = findfirst(==(min_error), relevant_errors)
-        return tracer[min_error_index][:solution], min_error_index
+   tsvd_errs = Float64[] 
+   push!(tsvd_errs, norm(rv))
 
-    else
-        @error("Unknown selection criterion: $criterion")
-    end
+   for k = 2:length(Σt)
+      θv[k] = zt[k] / Σt[k]
+      rv += Rv_Vt[:, k] * θv[k]
+      push!(tsvd_errs, norm(rv))
+   end
+
+   imin = argmin(tsvd_errs)
+   θv[imin+1:end] .= 0
+   return Vt * θv, Σt[imin]
 end
-=#
+
+function post_asp_tsvd(path, At, yt, Av, yv) 
+   Qt, Rt = qr(At); zt = Matrix(Qt)' * yt
+   Qv, Rv = qr(Av); zv = Matrix(Qv)' * yv
+
+   post = [] 
+   for (θ, λ) in path
+      if isempty(θ.nzind); push!(post, (θ = θ, λ = λ, σ = Inf)); continue; end  
+      inz = θ.nzind 
+      θ1, σ = solve_tsvd(Rt[:, inz], zt, Rv[:, inz], zv)
+      θ2 = copy(θ); θ2[inz] .= θ1
+      push!(post, (θ = θ2, λ = λ, σ = σ))
+   end 
+   return identity.(post)
+end

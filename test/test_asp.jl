@@ -63,51 +63,101 @@ end
 
 ##
 
+
+# I didn't wanna add more tsvd tests to yours so I just wrote this one
+# I only wanted to naïvely demonstrate that tsvd actually does make a difference! :)
+
+for (select, tolr, tolc) in [ (:final, 20*epsn, 1.5), 
+   ( (:byerror,1.3), 20*epsn, 1.5), 
+  ( (:bysize,73), 1, 10) ]
+   @show select 
+   local solver, results, C 
+   solver_tsvd = ACEfit.ASP(P=I, select=select, mode=:train, tsvd=true, 
+   nstore=100, loglevel=0, traceFlag=true)
+
+   solver = ACEfit.ASP(P=I, select=select, mode=:train, tsvd=false, 
+   nstore=100, loglevel=0, traceFlag=true)
+   # without validation 
+   results_tsvd = ACEfit.solve(solver_tsvd, A, y)
+   results = ACEfit.solve(solver, A, y)
+   C_tsvd = results_tsvd["C"]
+   C = results["C"]
+
+   @show results["nnzs"]
+   @show norm(A * C - y)
+   @show norm(A * C_tsvd - y)
+   if norm(A * C_tsvd - y)< norm(A * C - y)
+      @info "tsvd made improvements!"
+   else
+      @warn "tsvd did NOT make any improvements!"
+   end
+
+
+   # with validation 
+   results_tsvd = ACEfit.solve(solver_tsvd, At, yt, Av, yv)
+   results = ACEfit.solve(solver, At, yt, Av, yv)
+   C_tsvd = results_tsvd["C"]
+   C = results["C"]
+   @show results["nnzs"]
+   @show norm(A * C - y)
+   @show norm(A * C_tsvd - y)
+
+   if norm(A * C_tsvd - y)< norm(A * C - y)
+      @info "tsvd made improvements!"
+   else
+      @warn "tsvd did NOT make any improvements!"
+   end
+end
+
+
+##
+
 # Experimental Implementation of tsvd postprocessing 
 
 
-using SparseArrays
+# using SparseArrays
 
-function solve_tsvd(At, yt, Av, yv) 
-   Ut, Σt, Vt = svd(At); zt = Ut' * yt
-   Qv, Rv = qr(Av); zv = Matrix(Qv)' * yv
-   @assert issorted(Σt, rev=true)
+# function solve_tsvd(At, yt, Av, yv) 
+#    Ut, Σt, Vt = svd(At); zt = Ut' * yt
+#    Qv, Rv = qr(Av); zv = Matrix(Qv)' * yv
+#    @assert issorted(Σt, rev=true)
 
-   Rv_Vt = Rv * Vt
+#    Rv_Vt = Rv * Vt
 
-   θv = zeros(size(Av, 2))
-   θv[1] = zt[1] / Σt[1] 
-   rv = Rv_Vt[:, 1] * θv[1] - zv 
+#    θv = zeros(size(Av, 2))
+#    θv[1] = zt[1] / Σt[1] 
+#    rv = Rv_Vt[:, 1] * θv[1] - zv 
 
-   tsvd_errs = Float64[] 
-   push!(tsvd_errs, norm(rv))
+#    tsvd_errs = Float64[] 
+#    push!(tsvd_errs, norm(rv))
 
-   for k = 2:length(Σt)
-      θv[k] = zt[k] / Σt[k]
-      rv += Rv_Vt[:, k] * θv[k]
-      push!(tsvd_errs, norm(rv))
-   end
+#    for k = 2:length(Σt)
+#       θv[k] = zt[k] / Σt[k]
+#       rv += Rv_Vt[:, k] * θv[k]
+#       push!(tsvd_errs, norm(rv))
+#    end
 
-   imin = argmin(tsvd_errs)
-   θv[imin+1:end] .= 0
-   return Vt * θv, Σt[imin]
-end
+#    imin = argmin(tsvd_errs)
+#    θv[imin+1:end] .= 0
+#    return Vt * θv, Σt[imin]
+# end
 
-function post_asp_tsvd(path, At, yt, Av, yv) 
-   Qt, Rt = qr(At); zt = Matrix(Qt)' * yt
-   Qv, Rv = qr(Av); zv = Matrix(Qv)' * yv
+# function post_asp_tsvd(path, At, yt, Av, yv) 
+#    Qt, Rt = qr(At); zt = Matrix(Qt)' * yt
+#    Qv, Rv = qr(Av); zv = Matrix(Qv)' * yv
 
-   post = [] 
-   for (θ, λ) in path
-      if isempty(θ.nzind); push!(post, (θ = θ, λ = λ, σ = Inf)); continue; end  
-      inz = θ.nzind 
-      θ1, σ = solve_tsvd(Rt[:, inz], zt, Rv[:, inz], zv)
-      θ2 = copy(θ); θ2[inz] .= θ1
-      push!(post, (θ = θ2, λ = λ, σ = σ))
-   end 
-   return identity.(post)
-end   
+#    post = [] 
+#    for (θ, λ) in path
+#       if isempty(θ.nzind); push!(post, (θ = θ, λ = λ, σ = Inf)); continue; end  
+#       inz = θ.nzind 
+#       θ1, σ = solve_tsvd(Rt[:, inz], zt, Rv[:, inz], zv)
+#       θ2 = copy(θ); θ2[inz] .= θ1
+#       push!(post, (θ = θ2, λ = λ, σ = σ))
+#    end 
+#    return identity.(post)
+# end   
 
-solver = ACEfit.ASP(P=I, select = :final, loglevel=0, traceFlag=true)
-result = ACEfit.solve(solver, At, yt); 
-post = post_asp_tsvd(result["path"], At, yt, Av, yv);
+# solver = ACEfit.ASP(P=I, select = :final, loglevel=0, traceFlag=true)
+# result = ACEfit.solve(solver, At, yt); 
+# post = post_asp_tsvd(result["path"], At, yt, Av, yv);
+
