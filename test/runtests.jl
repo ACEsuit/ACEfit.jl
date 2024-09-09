@@ -8,5 +8,7 @@ using Test
 
     @testset "Linear Solvers" begin include("test_linearsolvers.jl") end
 
+    @testset "ASP" begin include("test_asp.jl") end
+
     @testset "MLJ Solvers" begin include("test_mlj.jl") end
 end
