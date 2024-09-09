@@ -1,7 +1,7 @@
 name = "ACEfit"
 uuid = "ad31a8ef-59f5-4a01-b543-a85c2f73e95c"
 authors = ["William C Witt <witt.chuck@gmail.com>, Christoph Ortner <christophortner0@gmail.com> and contributors"]
-version = "0.2.2"
+version = "0.2.3"
 
 [deps]
 ActiveSetPursuit = "d86c1dc8-ba26-4c98-b330-3a8efc174d20"
