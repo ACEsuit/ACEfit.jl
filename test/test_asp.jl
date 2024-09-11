@@ -1,6 +1,5 @@
 using ACEfit
 using LinearAlgebra, Random, Test 
-using Random
 
 ##
 
@@ -28,6 +27,12 @@ At = A[train_indices,:]
 Av = A[val_indices,:]
 yt = y[train_indices]
 yv = y[val_indices]
+
+for (nstore, n1) in [ (20, 21), (100, 101), (200, 165)]
+   solver = ACEfit.ASP(P=I, select = :final, nstore = nstore, loglevel=0, traceFlag=true)
+   results = ACEfit.solve(solver, A, y)
+   @test length(results["path"]) == n1 
+end
 
 for (select, tolr, tolc) in [ (:final, 10*epsn, 1), 
                              ( (:byerror,1.3), 10*epsn, 1), 

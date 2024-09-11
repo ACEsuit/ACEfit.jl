@@ -71,8 +71,8 @@ function solve(solver::ASP, A, y, Aval=A, yval=y)
     tracer = asp_homotopy(AP, y; solver.params...)
 
     q = length(tracer) 
-    every = max(1, q ÷ solver.nstore)
-    istore = unique([1:every:q; q])
+    every = max(1, q / solver.nstore)
+    istore = unique(round.(Int, [1:every:q; q]))
     new_tracer = [ (solution = tracer[i][1], λ = tracer[i][2], σ = 0.0 ) 
                    for i in istore ]
 
