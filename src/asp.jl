@@ -66,20 +66,23 @@ end
 function solve(solver::ASP, A, y, Aval=A, yval=y)
     # Apply preconditioning
     AP = A / solver.P
+    AvalP = Aval / solver.P
     
     tracer = asp_homotopy(AP, y; solver.params...)
 
     q = length(tracer) 
-    every = max(1, q ÷ solver.nstore)
-    istore = unique([1:every:q; q])
-    new_tracer = [ (solution = solver.P \ tracer[i][1], λ = tracer[i][2], σ = 0.0 ) 
+    every = max(1, q / solver.nstore)
+    istore = unique(round.(Int, [1:every:q; q]))
+    new_tracer = [ (solution = tracer[i][1], λ = tracer[i][2], σ = 0.0 ) 
                    for i in istore ]
 
     if solver.tsvd  # Post-processing if tsvd is true
-        post = post_asp_tsvd(new_tracer, A, y, Aval, yval)
-        new_post = [ (solution = p.θ, λ = p.λ, σ = p.σ) for p in post ]
+        post = post_asp_tsvd(new_tracer, AP, y, AvalP, yval)
+        new_post = [ (solution = solver.P \ p.θ, λ = p.λ, σ = p.σ) 
+                     for p in post ]
     else
-        new_post = new_tracer 
+        new_post = [ (solution = solver.P \ p.solution, λ = p.λ, σ = 0.0) 
+                     for p in new_tracer ]
     end
 
     xs, in = select_solution(new_post, solver, Aval, yval)
@@ -124,34 +127,6 @@ function select_solution(tracer, solver, A, y)
 end
 
 
-
-using SparseArrays
-
-function solve_tsvd(At, yt, Av, yv) 
-   Ut, Σt, Vt = svd(At); zt = Ut' * yt
-   Qv, Rv = qr(Av); zv = Matrix(Qv)' * yv
-   @assert issorted(Σt, rev=true)
-
-   Rv_Vt = Rv * Vt
-
-   θv = zeros(size(Av, 2))
-   θv[1] = zt[1] / Σt[1] 
-   rv = Rv_Vt[:, 1] * θv[1] - zv 
-
-   tsvd_errs = Float64[] 
-   push!(tsvd_errs, norm(rv))
-
-   for k = 2:length(Σt)
-      θv[k] = zt[k] / Σt[k]
-      rv += Rv_Vt[:, k] * θv[k]
-      push!(tsvd_errs, norm(rv))
-   end
-
-   imin = argmin(tsvd_errs)
-   θv[imin+1:end] .= 0
-   return Vt * θv, Σt[imin]
-end
-
 function post_asp_tsvd(path, At, yt, Av, yv) 
    Qt, Rt = qr(At); zt = Matrix(Qt)' * yt
    Qv, Rv = qr(Av); zv = Matrix(Qv)' * yv
@@ -166,14 +141,4 @@ function post_asp_tsvd(path, At, yt, Av, yv)
    end
 
    return _post.(path)
-
-#    post = [] 
-#    for (θ, λ) in path
-#       if isempty(θ.nzind); push!(post, (θ = θ, λ = λ, σ = Inf)); continue; end  
-#       inz = θ.nzind 
-#       θ1, σ = solve_tsvd(Rt[:, inz], zt, Rv[:, inz], zv)
-#       θ2 = copy(θ); θ2[inz] .= θ1
-#       push!(post, (θ = θ2, λ = λ, σ = σ))
-#    end 
-#    return identity.(post)
 end

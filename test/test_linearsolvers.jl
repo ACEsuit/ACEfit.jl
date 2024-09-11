@@ -1,8 +1,5 @@
 
-using ACEfit
-using LinearAlgebra, Random, Test 
-using Random
-using PythonCall
+using ACEfit, LinearAlgebra, Random, Test, PythonCall
 
 ##
 
@@ -168,3 +165,19 @@ C = results["C"]
 @test norm(A * C - y) < 10 * epsn 
 @test norm(C - c_ref) < 1
 
+
+##
+
+@info("Truncated SVD with validation")
+solver = ACEfit.TruncatedSVD(; rtol =  0.0)
+At = A[1:8000, :] 
+yt = y[1:8000]
+Av = A[8001:end, :]
+yv = y[8001:end]
+results_v = ACEfit.solve(solver, At, yt, Av, yv)
+@show err_v = norm(Av * results_v["C"] - yv)
+@show err = norm(Av * results["C"] - yv)
+@test err_v <= err 
+@show norm(results_v["C"] - c_ref)
+@show norm(results["C"] - c_ref)
+@test norm(results_v["C"] - c_ref) < 1e-2
