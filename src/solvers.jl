@@ -196,3 +196,37 @@ function solve(solver::TruncatedSVD, A, y)
     return Dict{String, Any}("C" => solver.P \ θP)
 end
 
+
+# ------------ Truncated SVD with tol specified by validation set ------------ 
+
+function solve_tsvd(At, yt, Av, yv) 
+    Ut, Σt, Vt = svd(At); zt = Ut' * yt
+    Qv, Rv = qr(Av); zv = Matrix(Qv)' * yv
+    @assert issorted(Σt, rev=true)
+ 
+    Rv_Vt = Rv * Vt
+ 
+    θv = zeros(size(Av, 2))
+    θv[1] = zt[1] / Σt[1] 
+    rv = Rv_Vt[:, 1] * θv[1] - zv 
+ 
+    tsvd_errs = Float64[] 
+    push!(tsvd_errs, norm(rv))
+ 
+    for k = 2:length(Σt)
+       θv[k] = zt[k] / Σt[k]
+       rv += Rv_Vt[:, k] * θv[k]
+       push!(tsvd_errs, norm(rv))
+    end
+ 
+    imin = argmin(tsvd_errs)
+    θv[imin+1:end] .= 0
+    return Vt * θv, Σt[imin]
+ end
+
+
+function solve(solver::TruncatedSVD, At, yt, Av, yv)
+    # make a function barrier because solver.P is not inferred 
+    θ, σ = solve_tsvd(At / solver.P, yt, Av / solver.P, yv)
+    return Dict{String, Any}("C" => solver.P \ θ, "σ" => σ)
+end
