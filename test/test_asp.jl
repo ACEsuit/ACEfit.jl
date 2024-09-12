@@ -28,18 +28,21 @@ Av = A[val_indices,:]
 yt = y[train_indices]
 yv = y[val_indices]
 
+
 for (nstore, n1) in [ (20, 21), (100, 101), (200, 165)]
-   solver = ACEfit.ASP(P=I, select = :final, nstore = nstore, loglevel=0, traceFlag=true)
+   solver = ACEfit.ASP(; P=I, select = :final, nstore = nstore, loglevel=0)
    results = ACEfit.solve(solver, A, y)
    @test length(results["path"]) == n1 
 end
+
+##
 
 for (select, tolr, tolc) in [ (:final, 10*epsn, 1), 
                              ( (:byerror,1.3), 10*epsn, 1), 
                             ( (:bysize,73), 1, 10) ]
     @show select 
     local solver, results, C 
-    solver = ACEfit.ASP(P=I, select = select, loglevel=0, traceFlag=true)
+    solver = ACEfit.ASP(P=I, select = select, loglevel=0)
     # without validation 
     results = ACEfit.solve(solver, A, y)
     C = results["C"]
@@ -77,11 +80,11 @@ for (select, tolr, tolc) in [ (:final, 20*epsn, 1.5),
   ( (:bysize,73), 1, 10) ]
    @show select 
    local solver, results, C 
-   solver_tsvd = ACEfit.ASP(P=I, select=select, mode=:train, tsvd=true, 
-   nstore=100, loglevel=0, traceFlag=true)
+   solver_tsvd = ACEfit.ASP(P=I, select=select, tsvd=true, 
+                     nstore=100, loglevel=0)
 
-   solver = ACEfit.ASP(P=I, select=select, mode=:train, tsvd=false, 
-   nstore=100, loglevel=0, traceFlag=true)
+   solver = ACEfit.ASP(P=I, select=select, tsvd=false, 
+                      nstore=100, loglevel=0)
    # without validation 
    results_tsvd = ACEfit.solve(solver_tsvd, A, y)
    results = ACEfit.solve(solver, A, y)

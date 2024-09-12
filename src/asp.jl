@@ -13,8 +13,9 @@ subject to
 ```
 
 ### Constructor Keyword arguments 
+
 ```julia
-ACEfit.ASP(; P = I, select = (:byerror, 1.0), 
+ACEfit.ASP(; P = I, select = (:byerror, 1.0), tsvd = false, nstore=100, 
             params...)
 ``` 
 
@@ -42,33 +43,30 @@ solve(solver::ASP, A, y, Aval=A, yval=y)
 ```
 * `A` : `m`-by-`n` design matrix. (required)
 * `b` : `m`-vector. (required)
-* `Aval = nothing` : `p`-by-`n` validation matrix (only for `validate` mode).
-* `bval = nothing` : `p`- validation vector (only for `validate` mode).
+* `Aval = nothing` : `p`-by-`n` validation matrix
+* `bval = nothing` : `p`- validation vector
 
 If independent `Aval` and `yval` are provided (instead of detaults `A, y`), 
 then the solver will use this separate validation set instead of the training
 set to select the best solution along the model path. 
-# """
-
+"""
 struct ASP
     P
     select
-    mode::Symbol
     tsvd::Bool
     nstore::Integer
     params
 end
 
-function ASP(; P = I, select, mode=:train, tsvd=false, nstore=100, params...)
-    return ASP(P, select, mode, tsvd, nstore, params)
+function ASP(; P = I, select, tsvd=false, nstore=100, params...)
+    return ASP(P, select, tsvd, nstore, params)
 end
 
 function solve(solver::ASP, A, y, Aval=A, yval=y)
     # Apply preconditioning
     AP = A / solver.P
     AvalP = Aval / solver.P
-    
-    tracer = asp_homotopy(AP, y; solver.params...)
+    tracer = asp_homotopy(AP, y; solver.params..., traceFlag = true)
 
     q = length(tracer) 
     every = max(1, q / solver.nstore)
@@ -89,7 +87,7 @@ function solve(solver::ASP, A, y, Aval=A, yval=y)
 
     return Dict( "C" => xs, 
                 "path" => new_post, 
-                "nnzs" => length( (new_tracer[in][:solution]).nzind) )
+                "nnzs" => length( (new_post[in][:solution]).nzind) )
 end
 
 
