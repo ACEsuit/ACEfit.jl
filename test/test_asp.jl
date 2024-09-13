@@ -117,3 +117,41 @@ for (select, tolr, tolc) in [ (:final, 20*epsn, 1.5),
    end
 end
 
+
+# Testing the "select" function 
+solver_final = ACEfit.ASP(
+    P = I, 
+    select = :final, 
+    tsvd = false, 
+    nstore = 100, 
+    loglevel = 0
+)
+
+results_final = ACEfit.solve(solver_final, At, yt, Av, yv)
+tracer_final = results_final["path"]
+
+# Warm-start the solver using the tracer from the final iteration
+solver_warmstart = ACEfit.ASP(
+    P = I, 
+    select = (:bysize, 73), 
+    tsvd = false, 
+    nstore = 100, 
+    loglevel = 0
+)
+
+results_warmstart = ACEfit.select(tracer_final, solver_warmstart, Av, yv)
+C_warmstart = results_warmstart["C"]
+
+# Check if starting the solver initially with (:bysize, 73) gives the same result
+solver_bysize = ACEfit.ASP(
+    P = I, 
+    select = (:bysize, 73), 
+    tsvd = false, 
+    nstore = 100, 
+    loglevel = 0
+)
+
+results_bysize = ACEfit.solve(solver_bysize, At, yt, Av, yv)
+@test results_bysize["C"] == C_warmstart  # works
+
+
