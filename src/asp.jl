@@ -83,19 +83,28 @@ function solve(solver::ASP, A, y, Aval=A, yval=y)
                      for p in new_tracer ]
     end
 
-    xs, in = select_solution(new_post, solver, Aval, yval)
+    tracer_final = _add_errors(new_post, Aval, yval)
+    xs, in = asp_select(tracer_final, solver.select)
 
-    return Dict( "C" => xs, 
-                "path" => new_post, 
-                "nnzs" => length( (new_post[in][:solution]).nzind) )
+    return Dict(   "C" => xs, 
+                "path" => tracer_final, )
 end
 
 
-function select_solution(tracer, solver, A, y)
-    if solver.select == :final
+function _add_errors(tracer, A, y) 
+    rtN = sqrt(length(y))
+    return [ ( solution = t.solution, λ = t.λ, σ = t.σ, 
+               rmse = norm(A * t.solution - y) / rtN ) 
+             for t in tracer ]
+end
+
+asp_select(D::Dict, select) = asp_select(D["path"], select)
+
+function asp_select(tracer, select)
+    if select == :final
       criterion = :final 
     else
-      criterion, p = solver.select
+      criterion, p = select
     end
     
     if criterion == :final
@@ -108,12 +117,12 @@ function select_solution(tracer, solver, A, y)
     elseif criterion == :bysize
         maxind = findfirst(t -> length((t[:solution]).nzind) > p, 
                          tracer) - 1
-        threshold = 1.0                          
+        threshold = 1.0
     else 
         error("Unknown selection criterion: $criterion")
     end
 
-    errors = [ norm(A * t[:solution] - y) for t in tracer[1:maxind] ]
+    errors = [ t.rmse for t in tracer[1:maxind] ]
     min_error = minimum(errors)
     for (i, error) in enumerate(errors)
         if error <= threshold * min_error
@@ -140,3 +149,16 @@ function post_asp_tsvd(path, At, yt, Av, yv)
 
    return _post.(path)
 end
+
+# TODO: revisit this idea. Maybe we do want to keep this, not as `select` 
+#       but as `solve`. But if we do, then it might be nice to be able to 
+#       extend the path somehow. For now I'm removing it since I don't see 
+#       the immediate need yet. Just calling asp_select is how I would normally 
+#       use this.  
+#
+# function select(tracer, solver, A, y) #can be called by the user to warm-start the selection
+#     xs, in = select_solution(tracer, solver, A, y)
+#     return Dict("C" => xs, 
+#                 "path" => tracer, 
+#                 "nnzs" => length( (tracer[in][:solution]).nzind) )  
+# end
