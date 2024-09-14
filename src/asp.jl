@@ -140,3 +140,10 @@ function post_asp_tsvd(path, At, yt, Av, yv)
 
    return _post.(path)
 end
+
+function select(tracer, solver, A, y) #can be called by the user to warm-start the selection
+    xs, in = select_solution(tracer, solver, A, y)
+    return Dict("C" => xs, 
+                "path" => tracer, 
+                "nnzs" => length( (tracer[in][:solution]).nzind) )  
+end
