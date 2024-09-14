@@ -1,5 +1,5 @@
 using ACEfit
-using LinearAlgebra, Random, Test 
+using LinearAlgebra, Random, Test
 
 ##
 
@@ -47,7 +47,7 @@ for (select, tolr, tolc) in [ (:final, 10*epsn, 1),
     results = ACEfit.solve(solver, A, y)
     C = results["C"]
     full_path = results["path"]
-    @show results["nnzs"]
+   #  @show results["nnzs"]
     @show norm(A * C - y)
     @show norm(C)
     @show norm(C - c_ref)
@@ -60,7 +60,7 @@ for (select, tolr, tolc) in [ (:final, 10*epsn, 1),
     results = ACEfit.solve(solver, At, yt, Av, yv)
     C = results["C"]
     full_path = results["path"]
-    @show results["nnzs"]
+   #  @show results["nnzs"]
     @show norm(Av * C - yv)
     @show norm(C)
     @show norm(C - c_ref)
@@ -91,7 +91,7 @@ for (select, tolr, tolc) in [ (:final, 20*epsn, 1.5),
    C_tsvd = results_tsvd["C"]
    C = results["C"]
 
-   @show results["nnzs"]
+   # @show results["nnzs"]
    @show norm(A * C - y)
    @show norm(A * C_tsvd - y)
    if norm(A * C_tsvd - y)< norm(A * C - y)
@@ -106,7 +106,7 @@ for (select, tolr, tolc) in [ (:final, 20*epsn, 1.5),
    results = ACEfit.solve(solver, At, yt, Av, yv)
    C_tsvd = results_tsvd["C"]
    C = results["C"]
-   @show results["nnzs"]
+   # @show results["nnzs"]
    @show norm(A * C - y)
    @show norm(A * C_tsvd - y)
 
@@ -117,6 +117,7 @@ for (select, tolr, tolc) in [ (:final, 20*epsn, 1.5),
    end
 end
 
+##
 
 # Testing the "select" function 
 solver_final = ACEfit.ASP(
@@ -131,16 +132,10 @@ results_final = ACEfit.solve(solver_final, At, yt, Av, yv)
 tracer_final = results_final["path"]
 
 # Warm-start the solver using the tracer from the final iteration
-solver_warmstart = ACEfit.ASP(
-    P = I, 
-    select = (:bysize, 73), 
-    tsvd = false, 
-    nstore = 100, 
-    loglevel = 0
-)
-
-results_warmstart = ACEfit.select(tracer_final, solver_warmstart, Av, yv)
-C_warmstart = results_warmstart["C"]
+# select best solution with <= 73 non-zero entries
+select = (:bysize, 73)
+C_select, _ = ACEfit.asp_select(tracer_final, select)
+@test( length(C_select.nzind) <= 73 )
 
 # Check if starting the solver initially with (:bysize, 73) gives the same result
 solver_bysize = ACEfit.ASP(
@@ -152,6 +147,6 @@ solver_bysize = ACEfit.ASP(
 )
 
 results_bysize = ACEfit.solve(solver_bysize, At, yt, Av, yv)
-@test results_bysize["C"] == C_warmstart  # works
+@test results_bysize["C"] == C_select  # works
 
 
