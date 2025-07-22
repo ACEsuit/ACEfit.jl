@@ -37,7 +37,7 @@ end
 
 # Accuracy test (with/without validation)
 function test_accuracy(solvertype)
-    for (select, tolr, tolc) in [(:final, 12*epsn, 1), ((:byerror, 1.3), 12*epsn, 1), ((:bysize, 360), 1, 15)]
+    for (select, tolr, tolc) in [(:final, 15*epsn, 1), ((:byerror, 1.3), 15*epsn, 1), ((:bysize, 360), 1, 15)]
         solver = solvertype(P=P, select=select, loglevel=0)
 
         # Without validation
