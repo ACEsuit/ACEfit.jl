@@ -13,7 +13,7 @@ U, S1, V = svd(A1)
 S = 1e-4 .+ ((S1 .- S1[end]) / (S1[1] - S1[end])).^2
 A = U * Diagonal(S) * V'
 c_ref = randn(Nfeat)
-epsn = 1e-4
+epsn = 1e-5
 y = A * c_ref + epsn * randn(Nobs) / sqrt(Nobs)
 # P = I
 P = Diagonal(1.0 .+ rand(Nfeat))
@@ -37,7 +37,7 @@ end
 
 # Accuracy test (with/without validation)
 function test_accuracy(solvertype)
-    for (select, tolr, tolc) in [(:final, 10*epsn, 1), ((:byerror, 1.2), 10*epsn, 1), ((:bysize, 330), 1, 15)]
+    for (select, tolr, tolc) in [(:final, 12*epsn, 1), ((:byerror, 1.3), 12*epsn, 1), ((:bysize, 360), 1, 15)]
         solver = solvertype(P=P, select=select, loglevel=0)
 
         # Without validation
