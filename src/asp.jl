@@ -1,5 +1,6 @@
 using Distributed
 using LinearAlgebra
+using SparseArrays
 
 @doc raw"""
 
@@ -79,21 +80,20 @@ function solve(solver::ASP, A, y, Aval=A, yval=y)
 
     tracer = asp_homotopy(F.R, Qtb1; solver.params..., traceFlag = true)
 
-    # tracer = asp_homotopy(AP, y; solver.params..., traceFlag = true)
-
     q = length(tracer) 
     every = max(1, q / solver.nstore)
     istore = unique(round.(Int, [1:every:q; q]))
-    new_tracer = [ (solution = tracer[i][1], λ = tracer[i][2], σ = 0.0 ) 
+
+    new_tracer = [ (solution = sparsevec(tracer[i][1].active, tracer[i][1].values, n),
+                    λ = tracer[i][2],
+                    σ = 0.0)
                    for i in istore ]
 
     if solver.tsvd  # Post-processing if tsvd is true
         post = post_asp_tsvd(new_tracer, F.R, Qtb1, AvalP, yval)
-        new_post = [ (solution = solver.P \ p.θ, λ = p.λ, σ = p.σ) 
-                     for p in post ]
+        new_post = [ (solution = solver.P \ p.θ, λ = p.λ, σ = p.σ) for p in post ]
     else
-        new_post = [ (solution = solver.P \ p.solution, λ = p.λ, σ = 0.0) 
-                     for p in new_tracer ]
+        new_post = [ (solution = solver.P \ p.solution, λ = p.λ, σ = 0.0) for p in new_tracer ]
     end
 
     tracer_final = _add_errors(new_post, Aval, yval)
@@ -147,20 +147,22 @@ function asp_select(tracer, select)
 end
 
 
-function post_asp_tsvd(path, At, yt, Av, yv) 
-   Qt, Rt = qr(At); zt = Matrix(Qt)' * yt
-   Qv, Rv = qr(Av); zv = Matrix(Qv)' * yv
 
-   function _post(θλ)
-      (θ, λ) = θλ
-      if isempty(θ.nzind); return (θ = θ, λ = λ, σ = Inf); end  
-      inz = θ.nzind 
-      θ1, σ = solve_tsvd(Rt[:, inz], zt, Rv[:, inz], zv)
-      θ2 = copy(θ); θ2[inz] .= θ1
-      return (θ = θ2, λ = λ, σ = σ)
-   end
+function post_asp_tsvd(path, At, yt, Av, yv)
+    function _post(t)
+        θ = t.solution
+        λ = t.λ
+        if isempty(θ.nzind)
+            return (θ = θ, λ = λ, σ = Inf)
+        end
+        inz = θ.nzind
+        θ1, σ = solve_tsvd(At[:, inz], yt, Av[:, inz], yv)
+        θ2 = copy(θ)
+        θ2[inz] .= θ1
+        return (θ = θ2, λ = λ, σ = σ)
+    end
 
-   return _post.(path)
+    return _post.(path)
 end
 
 # TODO: revisit this idea. Maybe we do want to keep this, not as `select` 
@@ -177,25 +179,20 @@ end
 # end
 
 
-
 @doc raw"""
 
 `OMP` : Orthogonal Matching Pursuit solver
 
-Solves the lasso optimization problem. 
-```math 
-\max_{y} \left( b^T y - \frac{1}{2} λ y^T y \right)
-```
-subject to
+Greedily builds a sparse solution to `Ax = b` by iteratively adding the 
+column of `A` most correlated with the current residual:
 ```math
-   \|A^T y\|_{\infty} \leq 1.
+\min_x \|x\|_0 \quad \text{subject to} \quad \|Ax - b\|_2 \leq \epsilon.
 ```
 
 ### Constructor Keyword arguments 
 
 ```julia
-ACEfit.ASP(; P = I, select = (:byerror, 1.0), tsvd = false, nstore=100, 
-            params...)
+OMP(; P = I, select, tsvd = false, nstore = 100, params...)
 ``` 
 
 * `select` : Selection criterion for the final solution (required) 
@@ -208,8 +205,6 @@ ACEfit.ASP(; P = I, select = (:byerror, 1.0), tsvd = false, nstore=100,
        non-zero features. 
 * `P = I` : prior / regularizer (optional)
 
-The remaining kwarguments to `ASP` are parameters for the ASP homotopy solver. 
-
 * `actMax` : Maximum number of active constraints.
 * `min_lambda` : Minimum value for `λ`.  (defaults to 0)
 * `loglevel` : Logging level.
@@ -218,7 +213,7 @@ The remaining kwarguments to `ASP` are parameters for the ASP homotopy solver.
 ### Extended syntax for `solve` 
 
 ```julia
-solve(solver::ASP, A, y, Aval=A, yval=y)
+solve(solver::OMP, A, y, Aval=A, yval=y)
 ```
 * `A` : `m`-by-`n` design matrix. (required)
 * `b` : `m`-vector. (required)
@@ -248,9 +243,6 @@ function solve(solver::OMP, A, y, Aval=A, yval=y)
 
     F = qr!(AP)
     m, n = size(AP)
-    if m < n
-        error("OMP requires m >= n, but got m = $m, n = $n")
-    end
     Qtb = F.Q' * y     
     Qtb1 = Qtb[1:n]     
 
@@ -259,7 +251,10 @@ function solve(solver::OMP, A, y, Aval=A, yval=y)
     q = length(tracer) 
     every = max(1, q / solver.nstore)
     istore = unique(round.(Int, [1:every:q; q]))
-    new_tracer = [ (solution = tracer[i][1], λ = tracer[i][2], σ = 0.0 ) 
+
+    new_tracer = [ (solution = sparsevec(tracer[i][1].active, tracer[i][1].values, n),
+                    λ = tracer[i][2],
+                    σ = 0.0)
                    for i in istore ]
 
     if solver.tsvd  # Post-processing if tsvd is true
