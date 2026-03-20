@@ -2,6 +2,7 @@
 
 using ACEfit
 using LinearAlgebra, Random, Test
+using SparseArrays
 
 @info("Test Solver on overdetermined system")
 
